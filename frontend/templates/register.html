@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — KNE Vape Shop</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+
+<div class="auth-layout">
+
+  <!-- Brand panel (left) -->
+  <div class="auth-brand">
+    <div class="brand-logo">KNE Vape Shop</div>
+    <div class="brand-tagline">
+      <h1>Your store,<br>your system.</h1>
+      <p>Create an account to start managing your inventory with precision.</p>
+    </div>
+  </div>
+
+  <!-- Auth panel (right) -->
+  <div class="auth-panel">
+    <button class="theme-toggle" id="themeToggle" onclick="theme.toggle()" aria-label="Toggle theme"></button>
+
+    <div class="auth-panel-header">
+      <h2>Create account</h2>
+      <p>Fill in your details to get started.</p>
+    </div>
+
+    <div class="alert" id="alert" role="alert"></div>
+
+    <div class="form-group">
+      <label for="name">Full name</label>
+      <input class="form-control" type="text" id="name"
+             placeholder="Juan Dela Cruz" autocomplete="name">
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email address</label>
+      <input class="form-control" type="email" id="email"
+             placeholder="you@example.com" autocomplete="email">
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="input-wrapper">
+        <input class="form-control" type="password" id="password"
+               placeholder="Min. 8 characters" autocomplete="new-password">
+        <button class="input-toggle" id="pwToggle"
+                onclick="togglePassword('password','pwToggle')" type="button" aria-label="Show password">
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Account type</label>
+      <div class="role-toggle">
+        <input type="radio" name="role" id="roleStaff" value="staff" class="role-option" checked>
+        <label for="roleStaff" class="role-label" id="staffLabel">
+          <!-- icon injected -->
+          <span>Staff</span>
+        </label>
+
+        <input type="radio" name="role" id="roleAdmin" value="admin" class="role-option">
+        <label for="roleAdmin" class="role-label" id="adminLabel">
+          <!-- icon injected -->
+          <span>Admin</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Admin passcode: revealed only when Admin is selected -->
+    <div class="admin-section" id="adminSection">
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label for="adminPasscode">Admin passcode</label>
+        <input class="form-control" type="password" id="adminPasscode"
+               placeholder="Enter admin passcode">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="registerBtn" onclick="handleRegister()">
+      <div class="spinner"></div>
+      <span class="btn-label">Create account</span>
+    </button>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login">Sign in</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="/static/js/auth.js"></script>
+<script>
+  redirectIfAuth();
+
+  // Inject icons
+  document.getElementById('pwToggle').innerHTML = iconEye();
+  document.getElementById('staffLabel').prepend(createIcon(iconStaff()));
+  document.getElementById('adminLabel').prepend(createIcon(iconAdmin()));
+
+  function createIcon(svg) {
+    const div = document.createElement('div');
+    div.innerHTML = svg;
+    return div.firstChild;
+  }
+
+  // Role toggle — show/hide admin passcode
+  document.querySelectorAll('input[name="role"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const isAdmin = document.getElementById('roleAdmin').checked;
+      document.getElementById('adminSection').classList.toggle('visible', isAdmin);
+    });
+  });
+
+  async function handleRegister() {
+    const name    = document.getElementById('name').value.trim();
+    const email   = document.getElementById('email').value.trim();
+    const password= document.getElementById('password').value;
+    const role    = document.querySelector('input[name="role"]:checked').value;
+    const adminPasscode = document.getElementById('adminPasscode').value;
+
+    hideAlert('alert');
+
+    if (!name || !email || !password) {
+      return showAlert('alert', 'Please fill in all required fields.');
+    }
+    if (password.length < 8) {
+      return showAlert('alert', 'Password must be at least 8 characters.');
+    }
+    if (role === 'admin' && !adminPasscode) {
+      return showAlert('alert', 'Admin passcode is required for admin accounts.');
+    }
+
+    setLoading('registerBtn', true);
+    try {
+      const body = { name, email, password, role };
+      if (role === 'admin') body.admin_passcode = adminPasscode;
+
+      const data = await apiPost('/api/auth/register', body);
+      // Redirect to verify page with email pre-filled
+      window.location.href = `/verify?email=${encodeURIComponent(email)}`;
+    } catch (err) {
+      showAlert('alert', err.message);
+    } finally {
+      setLoading('registerBtn', false);
+    }
+  }
+</script>
+</body>
+</html>
