@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KNE Vape Shop | [Page Name]</title>
+    
+    <script>(function(){var t=localStorage.getItem('kne_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="app-page">
+
+<div class="app-layout">
+
+    {# ── Sidebar ─────────────────────────────────────────── #}
+    {% include 'components/sidebar.html' %}
+
+    {# ── Main column ─────────────────────────────────────── #}
+    <main class="main-content">
+
+        {# ── Sticky header ───────────────────────────────── #}
+        {% set page_title = "[Page Title]" %}
+        {% include 'components/header.html' %}
+
+        {# ── Scrollable page body ────────────────────────── #}
+        <div class="page-body">
+
+            <div id="sysMsg" class="alert"></div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <div class="panel-eyebrow">Category</div>
+                        <div class="panel-title">Main Panel</div>
+                    </div>
+                </div>
+                <div class="panel-body" style="padding: 20px;">
+                    <p class="text-muted">Content goes here...</p>
+                </div>
+            </div>
+
+        </div>{# /page-body #}
+    </main>
+</div>{# /app-layout #}
+
+
+{# ══ Modals (Put them outside app-layout so z-index works perfectly) ══ #}
+
+<script src="/static/js/layout.js"></script>
+
+<script src="/static/js/[page_name].js"></script>
+
+</body>
+</html>

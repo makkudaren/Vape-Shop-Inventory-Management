@@ -1,86 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard — KNE Vape Shop</title>
-  <link rel="stylesheet" href="/static/css/app.css">
-  <style>
-    .placeholder-wrap {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 16px;
-      text-align: center;
-      padding: 24px;
-    }
-    .placeholder-wrap h1 { font-size: 28px; font-weight: 500; letter-spacing: -0.4px; }
-    .placeholder-wrap p  { color: var(--text-2); font-size: 15px; }
-    .user-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 8px 16px;
-      border-radius: 100px;
-      font-size: 14px;
-      font-weight: 500;
-    }
-    .role-badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 100px;
-      background: var(--surface-2);
-      color: var(--text-2);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .logout-btn {
-      margin-top: 8px;
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text-2);
-      padding: 10px 20px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      font-family: var(--font-sans);
-      font-size: 14px;
-      transition: all 0.18s;
-    }
-    .logout-btn:hover { background: var(--surface-2); color: var(--danger); border-color: var(--danger); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KNE Vape Shop | [Page Name]</title>
+    
+    <script>(function(){var t=localStorage.getItem('kne_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
-<div class="placeholder-wrap">
-  <h1>Dashboard</h1>
-  <p>Phase 1 & 2 complete. Authentication is working.</p>
+<body class="app-page">
 
-  <div class="user-pill">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-    </svg>
-    <span id="userName">Loading...</span>
-    <span class="role-badge" id="userRole">—</span>
-  </div>
+<div class="app-layout">
 
-  <button class="logout-btn" onclick="handleLogout()">Sign out</button>
-</div>
+    {# ── Sidebar ─────────────────────────────────────────── #}
+    {% include 'components/sidebar.html' %}
 
-<script src="/static/js/auth.js"></script>
-<script>
-  requireAuth();
-  const user = getUser();
-  if (user) {
-    document.getElementById('userName').textContent = user.name;
-    document.getElementById('userRole').textContent = user.role;
-  }
-  function handleLogout() {
-    clearSession();
-    window.location.href = '/login';
-  }
-</script>
+    {# ── Main column ─────────────────────────────────────── #}
+    <main class="main-content">
+
+        {# ── Sticky header ───────────────────────────────── #}
+        {% set page_title = "[Page Title]" %}
+        {% include 'components/header.html' %}
+
+        {# ── Scrollable page body ────────────────────────── #}
+        <div class="page-body">
+
+            <div id="sysMsg" class="alert"></div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <div class="panel-eyebrow">Category</div>
+                        <div class="panel-title">Main Panel</div>
+                    </div>
+                </div>
+                <div class="panel-body" style="padding: 20px;">
+                    <p class="text-muted">Content goes here...</p>
+                </div>
+            </div>
+
+        </div>{# /page-body #}
+    </main>
+</div>{# /app-layout #}
+
+
+{# ══ Modals (Put them outside app-layout so z-index works perfectly) ══ #}
+
+<script src="/static/js/layout.js"></script>
+
+<script src="/static/js/[page_name].js"></script>
+
 </body>
 </html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KNE Vape Shop | Inventory</title>
+    <!-- Prevent theme flash before CSS loads -->
+    <script>(function(){var t=localStorage.getItem('kne_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="app-page">
+
+<div class="app-layout">
+
+    {# ── Sidebar ─────────────────────────────────────────── #}
+    {% include 'components/sidebar.html' %}
+
+    {# ── Main column ─────────────────────────────────────── #}
+    <main class="main-content">
+
+        {# ── Sticky header ───────────────────────────────── #}
+        {% set page_title = "Inventory Management" %}
+        {% include 'components/header.html' %}
+
+        {# ── Scrollable page body ────────────────────────── #}
+        <div class="page-body">
+
+            <!-- System alert -->
+            <div id="sysMsg" class="alert"></div>
+
+            <!-- ── Stats row ──────────────────────────────── -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Active Stock Units</span>
+                        <div class="stat-icon" style="background:var(--accent-soft);">
+                            <svg fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totStock">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Low on Stock</span>
+                        <div class="stat-icon" style="background:var(--amber-soft);">
+                            <svg fill="none" stroke="var(--amber)" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3
+                                         L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totLow" style="color:var(--amber);">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Defective Units</span>
+                        <div class="stat-icon" style="background:var(--red-soft);">
+                            <svg fill="none" stroke="var(--red)" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0
+                                         015.636 5.636m12.728 12.728L5.636 5.636"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totDefect" style="color:var(--red);">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Inventory Value</span>
+                        <div class="stat-icon" style="background:var(--green-soft);">
+                            <svg fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-value currency" id="totValue" style="color:var(--green);">--</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Total Loss</span>
+                        <div class="stat-icon" style="background:var(--red-soft);">
+                            <svg fill="none" stroke="var(--red)" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-value currency" id="totLoss" style="color:var(--red);">--</div>
+                </div>
+            </div>
+
+            <!-- ── Inventory panel ────────────────────────── -->
+            <div class="panel panel-accent-purple">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <div class="panel-eyebrow">Inventory Control</div>
+                        <div class="panel-title">Product Stock</div>
+                    </div>
+                    <div class="panel-controls">
+                        <div class="search-box">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" id="searchInput" placeholder="SKU, title, flavor…" onkeyup="delaySearch()">
+                        </div>
+                        <select id="filterCategory" class="filter-select" onchange="loadInventory()">
+                            <option value="">All Types</option>
+                            <option value="E-Liquid">E-Liquid</option>
+                            <option value="Disposables">Disposables</option>
+                            <option value="Hardware">Hardware</option>
+                            <option value="Accessories">Accessories</option>
+                        </select>
+                        <select id="sortBy" class="filter-select" onchange="loadInventory()">
+                            <option value="created_at">Newest First</option>
+                            <option value="updated_at">Recently Updated</option>
+                            <option value="stock_low">Stock: Low → High</option>
+                            <option value="stock_high">Stock: High → Low</option>
+                            <option value="price_low">Price: Low → High</option>
+                            <option value="price_high">Price: High → Low</option>
+                        </select>
+                        <button class="btn btn-ghost" id="clearInvBtn" onclick="clearInventoryFilters()" style="display: none; padding: 9px 12px; color: var(--text-2);">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            Clear Filters
+                        </button>
+                        <div class="btn-group">
+                            <button class="btn btn-success" onclick="openBatchAddModal()">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                </svg>
+                                Batch Add
+                            </button>
+                            <button class="btn btn-primary" onclick="openProductModal()">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                </svg>
+                                Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <datalist id="skuList"></datalist>
+                    <datalist id="titleList"></datalist>
+                    <datalist id="brandList"></datalist>
+                    <datalist id="flavorList"></datalist>
+                    <datalist id="categoryList"></datalist>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>SKU</th>
+                                <th>Title / Flavor</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <span id="pageInfo" class="text-muted">Showing 0 of 0 items</span>
+                    <div class="page-controls">
+                        <button class="btn btn-ghost" style="padding:7px 14px;" onclick="changePage(-1)">← Prev</button>
+                        <button class="btn btn-ghost" style="padding:7px 14px;" onclick="changePage(1)">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Defective log panel ────────────────────── -->
+            <div class="panel panel-accent-red">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <div class="panel-eyebrow">Loss Tracking</div>
+                        <div class="panel-title">Defective Products Log</div>
+                    </div>
+                    <div class="panel-controls">
+                        <div class="search-box">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" id="searchDefectInput" placeholder="Search SKU, reason…" onkeyup="delayDefectSearch()">
+                        </div>
+                        <select id="sortDefect" class="filter-select" onchange="loadDefectives()">
+                            <option value="updated_at">Recently Updated</option>
+                            <option value="created_at">Newest First</option>
+                            <option value="qty_high">Quantity: High → Low</option>
+                            <option value="qty_low">Quantity: Low → High</option>
+                        </select>
+                        <button class="btn btn-ghost" id="clearDefectBtn" onclick="clearDefectFilters()" style="display: none; padding: 9px 12px; color: var(--text-2);">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            Clear Filters
+                        </button>
+                        <div class="btn-group">
+                            <button class="btn btn-warning" onclick="openBatchDefectModal()">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/>
+                                </svg>
+                                Batch Defect
+                            </button>
+                            <button class="btn btn-danger" onclick="openSingleDefectModal()">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                </svg>
+                                Report Defect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product</th> 
+                                <th>Quantity</th>
+                                <th>Reason</th>
+                                <th>Reported By</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="defectiveBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <span id="defectPageInfo" class="text-muted">Showing 0 of 0 items</span>
+                    <div class="page-controls">
+                        <button class="btn btn-ghost" style="padding:7px 14px;" onclick="changeDefectPage(-1)">← Prev</button>
+                        <button class="btn btn-ghost" style="padding:7px 14px;" onclick="changeDefectPage(1)">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>{# /page-body #}
+    </main>
+</div>{# /app-layout #}
+
+
+{# ══ Modals (outside app-layout, z-index stacking is fine) ══ #}
+
+<!-- Batch Add Modal -->
+<div class="modal-overlay" id="batchAddModal">
+    <div class="modal modal-wide">
+        <div class="modal-header">
+            <h3>Batch Add Inventory</h3>
+            <button class="btn-icon" onclick="closeModal('batchAddModal')">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted mt-0" style="font-size:13px;margin-bottom:16px;">
+                Existing SKUs will add stock. New SKUs create new products.
+            </p>
+            <div style="overflow-x:auto;">
+                <table class="batch-table" style="margin-bottom:12px;">
+                    <thead>
+                        <tr>
+                            <th>SKU *</th><th>Title *</th><th>Brand</th>
+                            <th>Flavor</th><th>Category</th><th>Price *</th><th>Qty *</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchAddTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="justify-content:space-between;">
+            <button class="btn btn-ghost" onclick="addBatchAddRow()">+ Add Row</button>
+            <button class="btn btn-primary" onclick="submitBatchAdd()">Confirm Restock</button>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Defect Modal -->
+<div class="modal-overlay" id="batchDefectModal">
+    <div class="modal modal-wide">
+        <div class="modal-header">
+            <h3>Report Batch Defects</h3>
+            <button class="btn-icon" onclick="closeModal('batchDefectModal')">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="overflow-x:auto;">
+                <table class="batch-table" style="margin-bottom:12px;">
+                    <thead>
+                        <tr>
+                            <th>Product SKU *</th><th>Qty *</th><th>Reason</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchDefectTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="justify-content:space-between;">
+            <button class="btn btn-ghost" onclick="addBatchDefectRow()">+ Add Row</button>
+            <button class="btn btn-danger" onclick="submitBatchDefect()">Report Losses</button>
+        </div>
+    </div>
+</div>
+
+<!-- Defect Edit Modal -->
+<div class="modal-overlay" id="defectEditModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Manage Defect Record</h3>
+            <button class="btn-icon" onclick="closeModal('defectEditModal')">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit_defect_id">
+            <h4 id="edit_defect_title" style="margin-top:0; color:var(--text-1); font-size: 16px;"></h4>
+
+            <div style="background:var(--surface-2); padding:16px; border-radius:12px; margin-bottom:20px;">
+                <p style="font-size:13px; font-weight:600; color:var(--text-1); margin-top:0; margin-bottom:4px;">Option A: Correct a Mistake</p>
+                <p style="font-size:12px; color:var(--text-2); margin-top:0; margin-bottom:12px;">Update this if you typed the wrong number. Reducing the number puts the difference back on the shelf.</p>
+                <div class="field" style="margin-bottom:12px;">
+                    <input type="number" id="edit_defect_qty" placeholder="Quantity Defective">
+                </div>
+                <button class="btn btn-secondary btn-full" onclick="updateDefectRecord()">Save Corrected Quantity</button>
+            </div>
+
+            <div style="background:var(--surface-2); padding:16px; border-radius:12px;">
+                <p style="font-size:13px; font-weight:600; color:var(--text-1); margin-top:0; margin-bottom:4px;">Option B: Resolve & Process</p>
+                <p style="font-size:12px; color:var(--text-2); margin-top:0; margin-bottom:12px;">Process some or all of these defective items.</p>
+                
+                <div class="field" style="margin-bottom:12px;">
+                    <label>Quantity to Process</label>
+                    <input type="number" id="resolve_defect_qty" placeholder="How many?">
+                </div>
+
+                <div style="display:flex; gap: 8px;">
+                    <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="resolveDefectRecord('return')">
+                        Return to Stock
+                    </button>
+                    <button class="btn btn-danger" style="flex:1; justify-content:center;" onclick="resolveDefectRecord('dispose')">
+                        Trash / Write-off
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Detail / Add Modal -->
+<div class="modal-overlay" id="productModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Product Details</h3>
+            <button class="btn-icon" onclick="closeModal('productModal')">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="tabs" id="modalTabs">
+            <div class="tab active"  onclick="switchTab('details')">Details</div>
+            <div class="tab" id="defectTabBtn"  onclick="switchTab('defect')"  style="display:none;">Report Defect</div>
+            <div class="tab" id="historyTabBtn" onclick="switchTab('history')" style="display:none;">Audit Log</div>
+        </div>
+        <div class="modal-body">
+
+            <!-- Details tab -->
+            <div id="tab-details" class="tab-content active">
+                <input type="hidden" id="p_id">
+                <div class="flex-col">
+                    <div class="field">
+                        <label>SKU</label>
+                        <input type="text" id="p_sku" list="skuList" placeholder="e.g. ELIQ-001">
+                    </div>
+                    <div class="field">
+                        <label>Product Title</label>
+                        <input type="text" id="p_title" list="titleList" placeholder="Product name">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="field">
+                            <label>Brand</label>
+                            <input type="text" id="p_brand" list="brandList" placeholder="Brand">
+                        </div>
+                        <div class="field">
+                            <label>Flavor</label>
+                            <input type="text" id="p_flavor" list="flavorList" placeholder="Flavor">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Category</label>
+                        <input type="text" id="p_cat" list="categoryList" placeholder="Category">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="field">
+                            <label>Price (PHP)</label>
+                            <input type="number" id="p_price" placeholder="0.00">
+                        </div>
+                        <div class="field">
+                            <label>Stock Qty</label>
+                            <input type="number" id="p_stock" placeholder="0">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+                </div>
+            </div>
+
+            <!-- Defect tab -->
+            <div id="tab-defect" class="tab-content">
+                <div class="flex-col">
+                    <p class="text-muted" style="font-size:13px;margin:0;">Subtracts stock and logs the loss.</p>
+                    <div class="field">
+                        <label>Quantity Defective</label>
+                        <input type="number" id="d_qty" placeholder="0">
+                    </div>
+                    <div class="field">
+                        <label>Reason</label>
+                        <select id="d_reason">
+                            <option value="Leaking">Leaking</option>
+                            <option value="Auto-firing">Auto-firing</option>
+                            <option value="Dead Battery">Dead Battery</option>
+                            <option value="Burnt Taste">Burnt Taste</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Note (optional)</label>
+                        <input type="text" id="d_note" placeholder="Additional details…">
+                    </div>
+                    <button class="btn btn-danger" onclick="submitDefect()">Report Loss</button>
+                </div>
+            </div>
+
+            <!-- History tab -->
+            <div id="tab-history" class="tab-content">
+                <ul id="historyList" style="list-style:none;padding:0;margin:0;font-size:13px;display:flex;flex-direction:column;gap:8px;"></ul>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="singleDefectModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Report Defective Product</h3>
+            <button class="btn-icon" onclick="closeModal('singleDefectModal')">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="flex-col">
+                <p class="text-muted" style="font-size:13px;margin:0;">Select a product to deduct from active stock and log as a loss.</p>
+                <div class="field">
+                    <label>Product SKU</label>
+                    <input type="text" id="sd_product_sku" list="skuList" placeholder="Search SKU...">
+                </div>
+                <div class="field">
+                    <label>Quantity Defective</label>
+                    <input type="number" id="sd_qty" placeholder="0">
+                </div>
+                <div class="field">
+                    <label>Reason</label>
+                    <select id="sd_reason">
+                        <option value="Leaking">Leaking</option>
+                        <option value="Auto-firing">Auto-firing</option>
+                        <option value="Dead Battery">Dead Battery</option>
+                        <option value="Burnt Taste">Burnt Taste</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Note (optional)</label>
+                    <input type="text" id="sd_note" placeholder="Additional details…">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger btn-full" onclick="submitSingleDefect()">Report Loss</button>
+        </div>
+    </div>
+</div>
+
+
+<script src="/static/js/layout.js"></script>
+<script src="/static/js/inventory.js"></script>
+</body>
+</html>

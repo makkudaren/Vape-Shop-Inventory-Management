@@ -1,98 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login — KNE Vape Shop</title>
-  <link rel="stylesheet" href="/static/css/app.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KNE Vape Shop | Sign In</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body class="auth-page">
 
-<div class="auth-layout">
-
-  <!-- Brand panel (left) -->
-  <div class="auth-brand">
-    <div class="brand-logo">KNE Vape Shop</div>
-    <div class="brand-tagline">
-      <h1>Inventory,<br>under control.</h1>
-      <p>Manage stock, track sales, and monitor your store — all in one place.</p>
-    </div>
-  </div>
-
-  <!-- Auth panel (right) -->
-  <div class="auth-panel">
-    <button class="theme-toggle" id="themeToggle" onclick="theme.toggle()" aria-label="Toggle theme"></button>
-
-    <div class="auth-panel-header">
-      <h2>Welcome back</h2>
-      <p>Sign in to your account to continue.</p>
+<div class="auth-wrapper">
+    <div class="auth-logo">
+        <div class="logo-mark">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+        </div>
+        <h1>KNE Vape Shop</h1>
+        <p>Inventory Management System</p>
     </div>
 
-    <div class="alert" id="alert" role="alert"></div>
+    <div class="auth-card">
+        <h2>Welcome back</h2>
+        <p class="subtitle">Sign in to access your inventory</p>
 
-    <div class="form-group">
-      <label for="email">Email address</label>
-      <input class="form-control" type="email" id="email"
-             placeholder="you@example.com" autocomplete="email">
-    </div>
+        <div id="msgBox" class="alert"></div>
 
-    <div class="form-group">
-      <label for="password">Password</label>
-      <div class="input-wrapper">
-        <input class="form-control" type="password" id="password"
-               placeholder="••••••••" autocomplete="current-password">
-        <button class="input-toggle" id="pwToggle"
-                onclick="togglePassword('password','pwToggle')" type="button" aria-label="Show password">
-          <!-- eye icon injected by JS -->
+        <div class="field">
+            <label>Email Address</label>
+            <div class="input-icon-wrap">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <input type="email" id="email" placeholder="you@example.com" required>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Password</label>
+            <div class="input-icon-wrap">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="handleLogin()" style="margin-top:8px;">
+            Sign In
         </button>
-      </div>
     </div>
 
-    <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
-      <div class="spinner"></div>
-      <span class="btn-label">Sign in</span>
-    </button>
-
-    <div class="auth-footer">
-      Don't have an account? <a href="/register">Create one</a>
-    </div>
-  </div>
-
+    <p class="auth-footer">
+        Don't have an account? <a href="/register">Create one</a>
+    </p>
 </div>
 
-<script src="/static/js/auth.js"></script>
 <script>
-  redirectIfAuth();
+    // Theme persistence
+    (function() {
+        const t = localStorage.getItem('kne_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+    })();
 
-  // inject eye icon on load
-  document.getElementById('pwToggle').innerHTML = iconEye();
-
-  // Allow Enter key
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleLogin();
-  });
-
-  async function handleLogin() {
-    const email    = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-
-    hideAlert('alert');
-
-    if (!email || !password) {
-      return showAlert('alert', 'Please fill in all fields.');
-    }
-
-    setLoading('loginBtn', true);
-    try {
-      const data = await apiPost('/api/auth/login', { email, password });
-      saveSession(data);
-      window.location.href = '/dashboard';
-    } catch (err) {
-      showAlert('alert', err.message);
-    } finally {
-      setLoading('loginBtn', false);
-    }
-  }
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedEmail = localStorage.getItem("verify_email");
+        if (savedEmail) document.getElementById("email").value = savedEmail;
+    });
 </script>
+<script src="/static/js/auth.js"></script>
 </body>
 </html>

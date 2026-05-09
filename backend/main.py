@@ -1,59 +1,53 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from database import engine, SessionLocal
-import models
-from routes import auth as auth_router
-import os
+from backend.database import engine, Base
+from backend.routers import auth
+from backend.routers import auth, inventory
 
-# Create all DB tables on startup
-models.Base.metadata.create_all(bind=engine)
+# Initialize DB models
+Base.metadata.create_all(bind=engine)
 
-# Seed default AppSettings if not present
-def seed_settings():
-    db = SessionLocal()
-    try:
-        if not db.query(models.AppSettings).first():
-            db.add(models.AppSettings())
-            db.commit()
-    finally:
-        db.close()
+app = FastAPI(title="KNE Vape Shop API")
 
-seed_settings()
+# Mount static and templates
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+templates = Jinja2Templates(directory="frontend/templates")
 
-app = FastAPI(title="KNE Vape Shop Inventory", version="1.0.0")
+# Include Routers
+app.include_router(auth.router)
+app.include_router(inventory.router)
 
-# Static files & templates
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND = os.path.join(BASE_DIR, "..", "frontend")
+# Frontend Routes
+@app.get("/")
+def read_login(request: Request):
+    return templates.TemplateResponse(request=request, name="login.html")
 
-app.mount("/static", StaticFiles(directory=os.path.join(FRONTEND, "static")), name="static")
-templates = Jinja2Templates(directory=os.path.join(FRONTEND, "templates"))
+@app.get("/login")
+def read_login(request: Request):
+    return templates.TemplateResponse(request=request, name="login.html")
 
-# ─── Routers ──────────────────────────────────────────────────────────────────
-app.include_router(auth_router.router)
+@app.get("/register")
+def read_register(request: Request):
+    return templates.TemplateResponse(request=request, name="register.html")
 
+@app.get("/verify")
+def read_verify(request: Request):
+    return templates.TemplateResponse(request=request, name="verify.html")
 
-# ─── Page Routes ──────────────────────────────────────────────────────────────
+@app.get("/inventory")
+def read_inventory(request: Request):
+    return templates.TemplateResponse(request=request, name="inventory.html")
+    
+# If you have these placeholder routes already, update them too:
+@app.get("/dashboard")
+def read_dashboard(request: Request):
+    return templates.TemplateResponse(request=request, name="dashboard.html")
 
-@app.get("/", response_class=HTMLResponse)
-def root():
-    return RedirectResponse(url="/login")
+@app.get("/sales")
+def read_sales(request: Request):
+    return templates.TemplateResponse(request=request, name="sales.html")
 
-@app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-@app.get("/register", response_class=HTMLResponse)
-def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
-
-@app.get("/verify", response_class=HTMLResponse)
-def verify_page(request: Request):
-    return templates.TemplateResponse("verify.html", {"request": request})
-
-@app.get("/dashboard", response_class=HTMLResponse)
-def dashboard_page(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+@app.get("/reports")
+def read_reports(request: Request):
+    return templates.TemplateResponse(request=request, name="reports.html")

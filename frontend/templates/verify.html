@@ -1,239 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify Email — KNE Vape Shop</title>
-  <link rel="stylesheet" href="/static/css/app.css">
-  <style>
-    .verify-wrap {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    .verify-card {
-      background: var(--surface);
-      border-radius: var(--radius-xl);
-      padding: 48px 44px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: var(--shadow-lg);
-      position: relative;
-      text-align: center;
-    }
-
-    .verify-icon {
-      width: 56px;
-      height: 56px;
-      background: var(--surface-2);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 24px;
-      color: var(--text-2);
-    }
-
-    .verify-card h2 {
-      font-size: 22px;
-      font-weight: 500;
-      letter-spacing: -0.3px;
-      margin-bottom: 8px;
-    }
-
-    .verify-card .subtitle {
-      font-size: 14px;
-      color: var(--text-2);
-      margin-bottom: 4px;
-      line-height: 1.6;
-    }
-
-    .email-display {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-
-    .resend-row {
-      margin-top: 20px;
-      font-size: 14px;
-      color: var(--text-2);
-    }
-
-    .resend-btn {
-      background: none;
-      border: none;
-      color: var(--text);
-      font-weight: 500;
-      cursor: pointer;
-      font-size: 14px;
-      font-family: var(--font-sans);
-      text-decoration: underline;
-    }
-
-    .resend-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .countdown {
-      font-variant-numeric: tabular-nums;
-      font-family: var(--font-mono);
-      font-size: 13px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KNE Vape Shop | Verify Email</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body class="auth-page">
 
-<div class="verify-wrap">
-  <div class="verify-card">
-    <button class="theme-toggle" id="themeToggle" onclick="theme.toggle()" aria-label="Toggle theme"></button>
-
-    <div class="verify-icon" id="verifyIcon">
-      <!-- Mail icon -->
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-        <polyline points="22,6 12,13 2,6"/>
-      </svg>
+<div class="auth-wrapper">
+    <div class="auth-logo">
+        <div class="logo-mark">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+        </div>
+        <h1>KNE Vape Shop</h1>
+        <p>Inventory Management System</p>
     </div>
 
-    <h2>Check your email</h2>
-    <p class="subtitle">We sent a 6-digit verification code to</p>
-    <p class="email-display" id="emailDisplay">—</p>
+    <div class="auth-card">
+        <h2>Check your email</h2>
+        <p class="subtitle">Enter the 6-digit code sent to your inbox</p>
 
-    <div class="alert" id="alert" role="alert" style="text-align:left"></div>
+        <div id="msgBox" class="alert"></div>
 
-    <div class="otp-inputs" id="otpInputs">
-      <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" id="otp0" aria-label="Digit 1">
-      <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" id="otp1" aria-label="Digit 2">
-      <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" id="otp2" aria-label="Digit 3">
-      <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" id="otp3" aria-label="Digit 4">
-      <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" id="otp4" aria-label="Digit 5">
-      <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" id="otp5" aria-label="Digit 6">
+        <div class="field">
+            <label>Email Address</label>
+            <div class="input-icon-wrap">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <input type="email" id="email" placeholder="you@example.com" required>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Verification Code</label>
+            <input type="text" id="code" placeholder="000000" maxlength="6" required class="code-input">
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="handleVerify()" style="margin-top:8px;">
+            Verify Account
+        </button>
     </div>
 
-    <button class="btn btn-primary" id="verifyBtn" onclick="handleVerify()">
-      <div class="spinner"></div>
-      <span class="btn-label">Verify email</span>
-    </button>
-
-    <div class="resend-row">
-      Didn't receive it?
-      <button class="resend-btn" id="resendBtn" onclick="handleResend()">Resend code</button>
-      <span class="countdown" id="countdown"></span>
-    </div>
-
-    <div class="auth-footer" style="margin-top:20px">
-      <a href="/login">Back to sign in</a>
-    </div>
-  </div>
+    <p class="auth-footer">
+        <a href="/">← Back to Sign In</a>
+    </p>
 </div>
 
-<script src="/static/js/auth.js"></script>
 <script>
-  redirectIfAuth();
+    (function() {
+        const t = localStorage.getItem('kne_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+    })();
 
-  // Get email from query string
-  const params = new URLSearchParams(window.location.search);
-  const email  = decodeURIComponent(params.get('email') || '');
-  if (email) document.getElementById('emailDisplay').textContent = email;
-
-  // ── OTP Input Behaviour ──────────────────────────────────────────────────────
-  const digits = Array.from(document.querySelectorAll('.otp-digit'));
-
-  digits.forEach((input, i) => {
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Backspace' && !input.value && i > 0) {
-        digits[i - 1].focus();
-        digits[i - 1].value = '';
-      }
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedEmail = localStorage.getItem("verify_email");
+        if (savedEmail) document.getElementById("email").value = savedEmail;
     });
-
-    input.addEventListener('input', e => {
-      // Strip non-numeric
-      input.value = input.value.replace(/\D/g, '').slice(-1);
-      if (input.value && i < digits.length - 1) {
-        digits[i + 1].focus();
-      }
-      // Auto-submit when all filled
-      if (digits.every(d => d.value)) handleVerify();
-    });
-
-    input.addEventListener('paste', e => {
-      e.preventDefault();
-      const pasted = (e.clipboardData || window.clipboardData)
-        .getData('text').replace(/\D/g, '').slice(0, 6);
-      pasted.split('').forEach((ch, idx) => {
-        if (digits[idx]) digits[idx].value = ch;
-      });
-      if (pasted.length === 6) handleVerify();
-      else digits[pasted.length]?.focus();
-    });
-  });
-
-  function getOtpValue() {
-    return digits.map(d => d.value).join('');
-  }
-
-  // ── Verify ───────────────────────────────────────────────────────────────────
-  async function handleVerify() {
-    const code = getOtpValue();
-    hideAlert('alert');
-    if (code.length < 6) return;
-
-    setLoading('verifyBtn', true);
-    try {
-      await apiPost('/api/auth/verify', { email, code });
-      showAlert('alert', 'Email verified! Redirecting to login...', 'success');
-      setTimeout(() => window.location.href = '/login', 1800);
-    } catch (err) {
-      showAlert('alert', err.message);
-      digits.forEach(d => d.value = '');
-      digits[0].focus();
-    } finally {
-      setLoading('verifyBtn', false);
-    }
-  }
-
-  // ── Resend with countdown ────────────────────────────────────────────────────
-  let countdownTimer = null;
-
-  function startCountdown(seconds) {
-    const resend    = document.getElementById('resendBtn');
-    const countdown = document.getElementById('countdown');
-    resend.disabled = true;
-
-    const tick = () => {
-      if (seconds <= 0) {
-        resend.disabled  = false;
-        countdown.textContent = '';
-        clearInterval(countdownTimer);
-        return;
-      }
-      countdown.textContent = ` (${seconds}s)`;
-      seconds--;
-    };
-    tick();
-    countdownTimer = setInterval(tick, 1000);
-  }
-
-  async function handleResend() {
-    hideAlert('alert');
-    try {
-      // email field is required by the schema but code isn't needed for resend
-      await apiPost('/api/auth/resend-code', { email, code: '000000' });
-      showAlert('alert', 'A new code has been sent to your email.', 'success');
-      startCountdown(60);
-      digits.forEach(d => d.value = '');
-      digits[0].focus();
-    } catch (err) {
-      showAlert('alert', err.message);
-    }
-  }
-
-  // Focus first digit on load
-  window.addEventListener('DOMContentLoaded', () => digits[0]?.focus());
 </script>
+<script src="/static/js/auth.js"></script>
 </body>
 </html>
