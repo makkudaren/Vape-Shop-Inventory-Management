@@ -21,7 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. Strict Role-Based Access Control (RBAC)
     if (role !== "admin") {
-        document.getElementById("dashReportsBtn").style.display = "none";
         document.getElementById("adminRevenueCard").style.display = "none";
     }
 
@@ -32,10 +31,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // ── Fetch & Populate Data ──────────────────────────────────
 async function loadDashboardData() {
     try {
+        // Fetch up to 2000 sales to ensure the entire month's history
         const [summaryRes, lowStockRes, salesRes] = await Promise.all([
             fetch("/api/inventory/summary", { headers }),
             fetch("/api/inventory?sort=stock_low&limit=5", { headers }),
-            fetch("/api/sales/history?limit=100", { headers })
+            fetch("/api/sales/history?limit=5000", { headers }) 
         ]);
 
         const summary = await summaryRes.json();
@@ -46,14 +46,31 @@ async function loadDashboardData() {
         document.getElementById("dashStock").innerText = summary.total_stock || 0;
         document.getElementById("dashLowStock").innerText = summary.low_stock || 0;
         
-        let totalRevenue = 0;
-        sales.data.forEach(s => totalRevenue += s.total);
+        // --- EXACT CALENDAR MONTH LOGIC ---
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        let monthlyRevenue = 0;
+        let monthlyProductsSold = 0;
+        
+        sales.data.forEach(s => {
+            // Convert UTC database time to local time
+            const saleDate = new Date(s.date + "Z");
+            
+            // Check if the sale happened in this exact month and year
+            if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+                monthlyRevenue += s.total;
+                s.items.forEach(i => monthlyProductsSold += i.qty);
+            }
+        });
         
         const numFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const revCard = document.getElementById("dashRevenue");
-        if (revCard) revCard.innerHTML = `<span class="peso-symbol">₱</span>${numFormat.format(totalRevenue)}`;
+        if (revCard) revCard.innerHTML = `<span class="peso-symbol">₱</span>${numFormat.format(monthlyRevenue)}`;
         
-        document.getElementById("dashSalesCount").innerText = sales.total || 0;
+        // Update to show the actual items sold this month, instead of all-time transactions
+        document.getElementById("dashSalesCount").innerText = monthlyProductsSold;
 
         // --- DRAW CHART & TABLES ---
         drawDashHealthChart(summary.total_stock, summary.total_defective);

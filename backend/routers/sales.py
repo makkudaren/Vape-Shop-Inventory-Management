@@ -88,7 +88,7 @@ def process_checkout(data: CheckoutRequest, db: Session = Depends(get_db), curre
 
 
 @router.get("/history")
-def get_sales_history(page: int = Query(1, ge=1), limit: int = Query(20, le=2000), db: Session = Depends(get_db)):
+def get_sales_history(page: int = Query(1, ge=1), limit: int = Query(20, le=10000), db: Session = Depends(get_db)):
     sales_query = db.query(Sale).order_by(desc(Sale.created_at))
     total = sales_query.count()
     sales = sales_query.offset((page - 1) * limit).limit(limit).all()

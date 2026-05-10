@@ -119,7 +119,8 @@ A virtual environment keeps project dependencies isolated.
 Install all required Python packages.
 
 =============================================================================
-> pip install requirements.txt
+> pip install -r requirements.txt
+> pip install "bcrypt<4.0.0"
 =============================================================================
 
 ---

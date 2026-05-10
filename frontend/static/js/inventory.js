@@ -130,16 +130,6 @@ function delaySearch() {
 // ── DOMContentLoaded ───────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
     const userRole = localStorage.getItem("user_role");
-
-    //Admin Check: Hide financials from staff
-    if (userRole !== "admin") {
-        const valCard = document.getElementById("totValue");
-        const lossCard = document.getElementById("totLoss");
-        
-        if (valCard) valCard.closest('.stat-card').style.display = 'none';
-        if (lossCard) lossCard.closest('.stat-card').style.display = 'none';
-    }
-
     loadSummary();
     loadCategories();
     loadInventory();
@@ -154,28 +144,6 @@ async function loadSummary() {
         document.getElementById("totStock").innerText  = data.total_stock;
         document.getElementById("totLow").innerText    = data.low_stock;
         document.getElementById("totDefect").innerText = data.total_defective;
-        const currencyFormat = new Intl.NumberFormat('en-PH', { 
-            style: 'currency', 
-            currency: 'PHP',
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2
-        });
-
-        const safeValue = Number(data.total_value) || 0;
-        const safeLoss = Number(data.total_loss) || 0;
-
-        // Formats just the number (e.g. "1,234.00")
-        const numFormat = new Intl.NumberFormat('en-US', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2
-        });
-
-        // Inject the styled Peso span + the formatted number
-        document.getElementById("totValue").innerHTML = 
-            `<span class="peso-symbol">₱</span>${numFormat.format(safeValue)}`;
-            
-        document.getElementById("totLoss").innerHTML = 
-            `<span class="peso-symbol">₱</span>${numFormat.format(safeLoss)}`;
     } catch {
         // silent — summary is non-critical
     }

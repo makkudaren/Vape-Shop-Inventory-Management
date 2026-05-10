@@ -197,7 +197,7 @@ def get_defective_items(
     search: Optional[str] = None,
     sort: str = "created_at",
     page: int = Query(1, ge=1),
-    limit: int = Query(10, le=100),
+    limit: int = Query(10, le=5000),
     db: Session = Depends(get_db)
 ):
     # Join with Product and User tables to search by SKU/Title and get names

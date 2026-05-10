@@ -13,6 +13,11 @@ Chart.defaults.color = '#8a8a96';
 Chart.defaults.font.family = "'DM Sans', sans-serif";
 let globalInventoryData = [];
 let distChartInstance = null;
+let globalSalesData = [];
+let globalDefectData = [];
+let repSalesPage = 1;
+let repDefectPage = 1;
+const repItemsPerPage = 5;
 
 document.addEventListener("DOMContentLoaded", () => {
     const userRole = localStorage.getItem("user_role");
@@ -26,10 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (revCard) revCard.closest('.stat-card').style.display = 'none';
         if (valCard) valCard.closest('.stat-card').style.display = 'none';
         if (lossCard) lossCard.closest('.stat-card').style.display = 'none';
-
-        // Hide Recent Sales Panel
-        const salesPanel = document.getElementById("repSalesBody");
-        if (salesPanel) salesPanel.closest('.panel').style.display = 'none';
     }
     loadReportData();
 });
@@ -37,13 +38,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // ── Fetch & Process Data ───────────────────────────────────
 async function loadReportData() {
     try {
-        // Fetch data concurrently using our existing API routes!
-        // We pull the last 200 sales and up to 1000 inventory items to calculate our stats.
         const [summaryRes, salesRes, invRes, defectRes] = await Promise.all([
             fetch("/api/inventory/summary", { headers }),
-            fetch("/api/sales/history?limit=200", { headers }), 
+            fetch("/api/sales/history?limit=5000", { headers }),
             fetch("/api/inventory?limit=1000", { headers }), 
-            fetch("/api/inventory/defective?limit=10", { headers }) 
+            fetch("/api/inventory/defective?limit=500", { headers }) 
         ]);
 
         const summary = await summaryRes.json();
@@ -52,12 +51,20 @@ async function loadReportData() {
         const defects = await defectRes.json();
 
         // 1. Calculate Top KPIs from Sales Data
-        let totalRevenue = 0;
-        let totalSold = 0;
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        let monthlyRevenue = 0;
+        let monthlySold = 0;
         
         sales.data.forEach(s => {
-            totalRevenue += s.total;
-            s.items.forEach(i => totalSold += i.qty);
+            const saleDate = new Date(s.date + "Z");
+            
+            if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+                monthlyRevenue += s.total;
+                s.items.forEach(i => monthlySold += i.qty);
+            }
         });
 
         // Format Currency
@@ -67,19 +74,21 @@ async function loadReportData() {
         });
         
         // Populate KPI Cards
-        document.getElementById("repRevenue").innerHTML = `<span class="peso-symbol">₱</span>${numFormat.format(totalRevenue)}`;
-        document.getElementById("repSold").innerText = totalSold;
+        document.getElementById("repRevenue").innerHTML = `<span class="peso-symbol">₱</span>${numFormat.format(monthlyRevenue)}`;
+        document.getElementById("repSold").innerText = monthlySold;
         document.getElementById("repValue").innerHTML = `<span class="peso-symbol">₱</span>${numFormat.format(summary.total_value || 0)}`;
         document.getElementById("repLoss").innerHTML = `<span class="peso-symbol">₱</span>${numFormat.format(summary.total_loss || 0)}`;
 
         // 2. Draw Charts
         globalInventoryData = inventory.data;
         switchDistTab('category');
-        
         drawHealthChart(summary.total_stock, summary.total_defective);
-        // 3. Populate Preview Tables (Show top 5 entries)
-        renderSalesTable(sales.data.slice(0, 5));
-        renderDefectTable(defects.data.slice(0, 5));
+        
+        globalSalesData = sales.data;
+        globalDefectData = defects.data;
+        
+        renderPaginatedSales();
+        renderPaginatedDefects();
 
     } catch (err) {
         console.error("Error loading reports data:", err);
@@ -246,4 +255,53 @@ function renderDefectTable(defectData) {
             </tr>
         `;
     });
+}
+
+// ── Client-Side Pagination Engine ──────────────────────────
+function renderPaginatedSales() {
+    const totalItems = globalSalesData.length;
+    const totalPages = Math.ceil(totalItems / repItemsPerPage) || 1;
+    
+    // Slice the array for the current page
+    const start = (repSalesPage - 1) * repItemsPerPage;
+    const end = start + repItemsPerPage;
+    const pageData = globalSalesData.slice(start, end);
+
+    // Update the UI text
+    document.getElementById("repSalesPageInfo").innerText = `Page ${repSalesPage} of ${totalPages} (${totalItems} items)`;
+    
+    // Draw the table
+    renderSalesTable(pageData);
+}
+
+function changeRepSalesPage(step) {
+    const totalPages = Math.ceil(globalSalesData.length / repItemsPerPage) || 1;
+    const newPage = repSalesPage + step;
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        repSalesPage = newPage;
+        renderPaginatedSales();
+    }
+}
+
+function renderPaginatedDefects() {
+    const totalItems = globalDefectData.length;
+    const totalPages = Math.ceil(totalItems / repItemsPerPage) || 1;
+    
+    const start = (repDefectPage - 1) * repItemsPerPage;
+    const end = start + repItemsPerPage;
+    const pageData = globalDefectData.slice(start, end);
+
+    document.getElementById("repDefectPageInfo").innerText = `Page ${repDefectPage} of ${totalPages} (${totalItems} items)`;
+    renderDefectTable(pageData);
+}
+
+function changeRepDefectPage(step) {
+    const totalPages = Math.ceil(globalDefectData.length / repItemsPerPage) || 1;
+    const newPage = repDefectPage + step;
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        repDefectPage = newPage;
+        renderPaginatedDefects();
+    }
 }
