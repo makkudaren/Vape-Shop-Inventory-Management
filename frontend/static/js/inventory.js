@@ -1,5 +1,6 @@
-// ── Auth Guard ─────────────────────────────────────────────
+// ── Auth Guard & Role Setup ────────────────────────────────
 const token = localStorage.getItem("access_token");
+const role = localStorage.getItem("user_role");
 if (!token) window.location.href = "/";
 
 const headers = {
@@ -11,16 +12,12 @@ const headers = {
 let autocompleteCache = [];
 let autocompleteTimer;
 
-// This watches the entire page for typing in ANY input attached to "skuList"
 document.addEventListener("input", function (e) {
     if (e.target.hasAttribute("list") && e.target.getAttribute("list") === "skuList") {
         const val = e.target.value.trim();
-
-        // 1. Did they type or click a perfect SKU match?
         const matched = autocompleteCache.find(p => p.sku === val);
         
         if (matched) {
-            // Auto-fill Batch Add row
             if (e.target.classList.contains("ba-sku")) {
                 const tr = e.target.closest("tr");
                 tr.querySelector(".ba-title").value  = matched.title    || "";
@@ -28,38 +25,29 @@ document.addEventListener("input", function (e) {
                 tr.querySelector(".ba-flavor").value = matched.flavor   || "";
                 tr.querySelector(".ba-cat").value    = matched.category || "";
                 tr.querySelector(".ba-price").value  = matched.price    || "";
-            } 
-            // Auto-fill Single Product Add/Edit
-            else if (e.target.id === "p_sku") {
+            } else if (e.target.id === "p_sku") {
                 document.getElementById("p_title").value  = matched.title    || "";
                 document.getElementById("p_brand").value  = matched.brand    || "";
                 document.getElementById("p_flavor").value = matched.flavor   || "";
                 document.getElementById("p_cat").value    = matched.category || "";
                 document.getElementById("p_price").value  = matched.price    || "";
             }
-            return; // Stop here! No need to hit the server.
+            return; 
         }
 
-        // 2. Not a perfect match yet? Fetch suggestions from the server!
-        if (val.length < 2) return; // Wait until they type at least 2 characters
-
+        if (val.length < 2) return; 
         clearTimeout(autocompleteTimer);
         
-        // Debounce: Wait 300ms after they stop typing before asking the server
         autocompleteTimer = setTimeout(async () => {
             try {
                 const res = await fetch(`/api/inventory/autocomplete?q=${val}`, { headers });
                 autocompleteCache = await res.json();
-
-                // Inject the new matches into the HTML datalist
                 const datalist = document.getElementById("skuList");
                 datalist.innerHTML = ""; 
                 autocompleteCache.forEach(p => {
                     datalist.innerHTML += `<option value="${p.sku}">${p.title} (${p.brand})</option>`;
                 });
-            } catch (err) {
-                console.error("Autocomplete failed:", err);
-            }
+            } catch (err) { console.error("Autocomplete failed:", err); }
         }, 300);
     }
 });
@@ -68,28 +56,16 @@ document.addEventListener("input", function (e) {
 function formatTimeAgo(dateString) {
     if (!dateString) return "N/A";
     let safeDate = dateString;
-    if (!safeDate.endsWith("Z")) {
-        safeDate += "Z"; 
-    }
-    const date = new Date(safeDate);
-    
-    // Uses the compact style AND forces it to Philippine Time
-    return date.toLocaleString('en-US', { 
-        dateStyle: 'short', 
-        timeStyle: 'short',
-        timeZone: 'Asia/Manila'
-    });
+    if (!safeDate.endsWith("Z")) safeDate += "Z"; 
+    return new Date(safeDate).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Manila' });
 }
 
 function showSysMsg(msg, isError) {
     const el = document.getElementById("sysMsg");
     if (!el) return;
     
-
-    // If FastAPI sends back a validation array, extract the first readable error
     let safeMsg = msg;
     if (Array.isArray(msg) && msg.length > 0) {
-        // Formats the error nicely, e.g., "price: Input should be a valid number"
         const fieldName = msg[0].loc && msg[0].loc[1] ? msg[0].loc[1] : "Input";
         safeMsg = `${fieldName}: ${msg[0].msg}`;
     } else if (typeof msg === "object") {
@@ -106,17 +82,12 @@ function showSysMsg(msg, isError) {
     el.innerHTML = `${icon} <span>${safeMsg}</span>`;
     
     if (window.sysMsgTimeout) clearTimeout(window.sysMsgTimeout);
-    
     window.sysMsgTimeout = setTimeout(() => { 
         el.classList.remove("show"); 
-        setTimeout(() => {
-            if (!el.classList.contains("show")) el.style.display = "none";
-        }, 400); 
+        setTimeout(() => { if (!el.classList.contains("show")) el.style.display = "none"; }, 400); 
     }, 3000);
 }
 
-
-// Modal helpers — use classList.toggle("open") to match inventory.html's closeModal/openModal
 function closeModal(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -140,16 +111,14 @@ const catIcons = {
     "Default":     `<svg fill="none" stroke="currentColor" width="24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`
 };
 
-// ── Pagination State ───────────────────────────────────────
 let currentPage = 1;
 const itemsPerPage = 15;
 let currentDefectPage = 1;
 const defectsPerPage = 10;
 let maxDefectPages = 1;
 let defectSearchTimeout;
-
-// ── Search Debounce ────────────────────────────────────────
 let searchTimeout;
+
 function delaySearch() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
@@ -158,17 +127,23 @@ function delaySearch() {
     }, 350);
 }
 
-// ── DOMContentLoaded — single combined listener ────────────
+// ── DOMContentLoaded ───────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
+    const userRole = localStorage.getItem("user_role");
+
+    //Admin Check: Hide financials from staff
+    if (userRole !== "admin") {
+        const valCard = document.getElementById("totValue");
+        const lossCard = document.getElementById("totLoss");
+        
+        if (valCard) valCard.closest('.stat-card').style.display = 'none';
+        if (lossCard) lossCard.closest('.stat-card').style.display = 'none';
+    }
+
     loadSummary();
     loadCategories();
     loadInventory();
     loadDefectives();
-
-    // Single-product modal: auto-fill on SKU match
-    const singleSkuInput = document.getElementById("p_sku");
-    if (singleSkuInput) {
-    }
 });
 
 // ── 1. Summary ─────────────────────────────────────────────
@@ -210,17 +185,23 @@ async function loadSummary() {
 async function loadInventory() {
     const search   = document.getElementById("searchInput").value;
     const category = document.getElementById("filterCategory").value;
+    
+    const brand    = document.getElementById("filterBrand") ? document.getElementById("filterBrand").value : "";
+    const flavor   = document.getElementById("filterFlavor") ? document.getElementById("filterFlavor").value : "";
     const sort     = document.getElementById("sortBy").value;
 
     const clearInvBtn = document.getElementById("clearInvBtn");
-    if (search !== "" || category !== "" || sort !== "created_at") {
+    
+    // Check if ANY filter is active to show the clear button
+    if (search !== "" || category !== "" || brand !== "" || flavor !== "" || sort !== "created_at") {
         clearInvBtn.style.display = "inline-flex";
     } else {
         clearInvBtn.style.display = "none";
     }
 
+    // Pass everything to the backend
     const query = new URLSearchParams({
-        search, category, sort, page: currentPage, limit: itemsPerPage
+        search, category, brand, flavor, sort, page: currentPage, limit: itemsPerPage
     }).toString();
 
     try {
@@ -232,7 +213,7 @@ async function loadInventory() {
 
         if (json.data.length === 0) {
             // Check if the user is currently searching or filtering
-            const isFiltering = search !== "" || category !== "";
+            const isFiltering = search !== "" || category !== "" || brand !== "" || flavor !== "" || sort !== "created_at";
 
             if (isFiltering) {
                 // State A: No Search Results
@@ -276,7 +257,7 @@ async function loadInventory() {
             const tr = document.createElement("tr");
             tr.style.cursor = "pointer";
             tr.onclick = () => openProductModal(p);
-            const badgeClass = p.status === "In Stock" ? "success" : p.status === "Low Stock" ? "warning" : "error";
+            const badgeClass = p.status === "In Stock" ? "badge-green" : p.status === "Low Stock" ? "badge-amber" : "badge-red";
             tr.innerHTML = `
                 <td style="color:var(--text-secondary)">${catIcons[p.category] || catIcons["Default"]}</td>
                 <td><strong>${p.sku}</strong></td>
@@ -309,11 +290,12 @@ function changePage(step) {
 function clearInventoryFilters() {
     document.getElementById("searchInput").value = "";
     document.getElementById("filterCategory").value = "";
+    if (document.getElementById("filterBrand")) document.getElementById("filterBrand").value = "";
+    if (document.getElementById("filterFlavor")) document.getElementById("filterFlavor").value = "";
     document.getElementById("sortBy").value = "created_at";
     currentPage = 1;
     loadInventory();
 }
-
 // ── 3. Defectives Table ────────────────────────────────────
 async function loadDefectives() {
     const search = document.getElementById("searchDefectInput").value;
@@ -931,30 +913,52 @@ async function submitSingleDefect() {
     }
 }
 
-// ── 14. Dynamic Categories ─────────────────────────────────────
+// ── 14. Dynamic Categories & Filters ──────────────────────────
 async function loadCategories() {
     try {
-        const res = await fetch("/api/inventory/categories", { headers });
-        const categories = await res.json();
-
-        const filterSelect = document.getElementById("filterCategory");
-        const modalSelect  = document.getElementById("p_cat");
-        const datalist     = document.getElementById("categoryList");
-
-        // 1. Reset the Main Filter (keep the "All Types" default option)
-        if (filterSelect) filterSelect.innerHTML = '<option value="">All Types</option>';
+        // Fetch all three lists concurrently
+        const [catRes, brandRes, flavorRes] = await Promise.all([
+            fetch("/api/inventory/categories", { headers }),
+            fetch("/api/inventory/brands", { headers }),
+            fetch("/api/inventory/flavors", { headers })
+        ]);
         
-        // 2. Reset the Product Modal Dropdown & Datalist
-        if (modalSelect) modalSelect.innerHTML = '';
-        if (datalist) datalist.innerHTML = '';
+        const categories = await catRes.json();
+        const brands = await brandRes.json();
+        const flavors = await flavorRes.json();
 
-        // 3. Inject the dynamic categories into all three places
-        categories.forEach(cat => {
-            if (filterSelect) filterSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
-            if (modalSelect)  modalSelect.innerHTML  += `<option value="${cat}">${cat}</option>`;
-            if (datalist)     datalist.innerHTML     += `<option value="${cat}">`;
+        // 1. Setup the Inventory Table Filters
+        const filterCat = document.getElementById("filterCategory");
+        const filterBrand = document.getElementById("filterBrand");
+        const filterFlavor = document.getElementById("filterFlavor");
+
+        if (filterCat) filterCat.innerHTML = '<option value="">All Categories</option>';
+        if (filterBrand) filterBrand.innerHTML = '<option value="">All Brands</option>';
+        if (filterFlavor) filterFlavor.innerHTML = '<option value="">All Flavors</option>';
+
+        categories.forEach(c => { if(filterCat && c) filterCat.innerHTML += `<option value="${c}">${c}</option>` });
+        brands.forEach(b => { if(filterBrand && b) filterBrand.innerHTML += `<option value="${b}">${b}</option>` });
+        flavors.forEach(f => { if(filterFlavor && f) filterFlavor.innerHTML += `<option value="${f}">${f}</option>` });
+
+        // 2. Setup the Product Modal Datalists (for adding/editing)
+        const modalCat = document.getElementById("p_cat");
+        const listCat = document.getElementById("categoryList");
+        const listBrand = document.getElementById("brandList");
+        const listFlavor = document.getElementById("flavorList");
+
+        if (modalCat) modalCat.innerHTML = '';
+        if (listCat) listCat.innerHTML = '';
+        if (listBrand) listBrand.innerHTML = '';
+        if (listFlavor) listFlavor.innerHTML = '';
+
+        categories.forEach(c => {
+            if (modalCat && c) modalCat.innerHTML += `<option value="${c}">${c}</option>`;
+            if (listCat && c) listCat.innerHTML += `<option value="${c}">`;
         });
+        brands.forEach(b => { if (listBrand && b) listBrand.innerHTML += `<option value="${b}">` });
+        flavors.forEach(f => { if (listFlavor && f) listFlavor.innerHTML += `<option value="${f}">` });
+
     } catch (err) {
-        console.error("Failed to load dynamic categories:", err);
+        console.error("Failed to load dynamic filters:", err);
     }
 }

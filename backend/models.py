@@ -67,3 +67,10 @@ class AuditLog(Base):
     action = Column(String)
     target = Column(String)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+class StoreSettings(Base):
+    __tablename__ = "store_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    global_discount = Column(Float, default=0.0)
+    global_tax = Column(Float, default=0.0)
+    service_fee = Column(Float, default=0.0)

@@ -57,3 +57,13 @@
         </button>
     </div>
 </aside>
+
+<script>
+    (function() {
+        if (localStorage.getItem('kne_sidebar') === 'collapsed') {
+            document.getElementById('sidebar').classList.add('collapsed');
+            var btn = document.getElementById('desktopToggle');
+            if (btn) btn.style.transform = 'rotate(180deg)';
+        }
+    })();
+</script>

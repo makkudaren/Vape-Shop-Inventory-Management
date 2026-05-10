@@ -3,52 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KNE Vape Shop | [Page Name]</title>
-    
+    <title>KNE Vape Shop | Dashboard</title>
     <script>(function(){var t=localStorage.getItem('kne_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="app-page">
 
 <div class="app-layout">
-
-    {# ── Sidebar ─────────────────────────────────────────── #}
     {% include 'components/sidebar.html' %}
 
-    {# ── Main column ─────────────────────────────────────── #}
     <main class="main-content">
-
-        {# ── Sticky header ───────────────────────────────── #}
-        {% set page_title = "[Page Title]" %}
+        {% set page_title = "Dashboard" %}
         {% include 'components/header.html' %}
 
-        {# ── Scrollable page body ────────────────────────── #}
         <div class="page-body">
-
             <div id="sysMsg" class="alert"></div>
 
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title-group">
-                        <div class="panel-eyebrow">Category</div>
-                        <div class="panel-title">Main Panel</div>
-                    </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 8px;">
+                <div>
+                    <h2 style="font-size:24px; font-weight:700; color:var(--text-1); letter-spacing:-0.5px; margin-bottom:4px;">
+                        Welcome back, <span id="welcomeName" style="color:var(--accent);">User</span>!
+                    </h2>
+                    <p class="text-muted" style="margin:0;">Here is a quick overview of your shop today.</p>
                 </div>
-                <div class="panel-body" style="padding: 20px;">
-                    <p class="text-muted">Content goes here...</p>
+                
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <a href="/sales" class="btn btn-primary">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        New Sale
+                    </a>
+                    <a href="/inventory" class="btn btn-secondary">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        Manage Inventory
+                    </a>
+                    <a href="/reports" class="btn btn-ghost" id="dashReportsBtn">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Reports
+                    </a>
                 </div>
             </div>
 
-        </div>{# /page-body #}
+            <div class="stats-grid">
+                <div class="stat-card" id="adminRevenueCard">
+                    <div class="stat-header">
+                        <span class="stat-label">Gross Revenue</span>
+                        <div class="stat-icon" style="background:var(--green-soft);">
+                            <svg fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value currency" id="dashRevenue" style="color:var(--green);">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Total Sales</span>
+                        <div class="stat-icon" style="background:var(--accent-soft);">
+                            <svg fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="dashSalesCount">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Active Stock Units</span>
+                        <div class="stat-icon" style="background:var(--surface-3);">
+                            <svg fill="none" stroke="var(--text-1)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="dashStock">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Low Stock Alerts</span>
+                        <div class="stat-icon" style="background:var(--amber-soft);">
+                            <svg fill="none" stroke="var(--amber)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="dashLowStock" style="color:var(--amber);">--</div>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+                
+                <div class="panel panel-accent-purple" style="flex: 2; min-width: 280px; display: flex; flex-direction: column; min-height: 450px;">
+                    <div class="panel-header" style="flex-wrap: wrap; gap: 12px; flex-shrink: 0;">
+                        <div class="panel-title">Inventory Quick Search</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end; align-items: center;">
+                            <div class="search-box" style="flex: 1; min-width: 140px;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <input type="text" id="dashInvSearch" placeholder="Search SKU, Flavor..." onkeyup="delayDashInvSearch()">
+                            </div>
+                            <select id="dashInvCategory" class="filter-select" onchange="delayDashInvSearch()">
+                                <option value="">All Categories</option>
+                            </select>
+                            <select id="dashInvSort" class="filter-select" onchange="delayDashInvSearch()">
+                                <option value="created_at">Newest First</option>
+                                <option value="stock_low">Stock: Low &rarr; High</option>
+                                <option value="stock_high">Stock: High &rarr; Low</option>
+                            </select>
+                            <a href="/inventory" class="btn btn-secondary">Full Manager &rarr;</a>
+                        </div>
+                    </div>
+                    
+                    <div class="table-wrap" style="flex: 1; overflow: auto;">
+                        <table style="min-width: 650px;">
+                            <thead style="position: sticky; top: 0; z-index: 10;">
+                                <tr><th>SKU</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th></tr>
+                            </thead>
+                            <tbody id="dashInvBody"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination" style="flex-shrink: 0; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 10px;">
+                        <span id="dashInvPageInfo" class="text-muted">Showing 0 of 0 items</span>
+                        <div class="page-controls">
+                            <button class="btn btn-ghost" style="padding:7px 14px;" onclick="changeDashInvPage(-1)">&larr; Prev</button>
+                            <button class="btn btn-ghost" style="padding:7px 14px;" onclick="changeDashInvPage(1)">Next &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="flex: 1; min-width: 300px; display: flex; flex-direction: column; min-height: 450px;">
+                    <div class="panel-header" style="flex-shrink: 0;">
+                        <div>
+                            <div class="panel-eyebrow">Health Assessment</div>
+                            <div class="panel-title">Active vs Defective</div>
+                        </div>
+                    </div>
+                    <div style="padding: 20px; flex: 1; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="dashHealthChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+                <div class="panel panel-accent-green" id="dashSalesPanel">
+                    <div class="panel-header" style="padding-bottom: 12px;">
+                        <div class="panel-title">Recent Transactions</div>
+                        <a href="/sales" style="font-size:12px; color:var(--text-2); font-weight:600; text-decoration:none;">Go to POS &rarr;</a>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Sale #</th><th>Time</th><th>Total</th></tr>
+                            </thead>
+                            <tbody id="dashSalesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="panel panel-accent-amber">
+                    <div class="panel-header" style="padding-bottom: 12px;">
+                        <div class="panel-title">Low Stock Items</div>
+                        <a href="/inventory" style="font-size:12px; color:var(--text-2); font-weight:600; text-decoration:none;">View Inventory &rarr;</a>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>SKU</th><th>Product</th><th>Stock</th></tr>
+                            </thead>
+                            <tbody id="dashLowStockBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
     </main>
-</div>{# /app-layout #}
+</div>
 
-
-{# ══ Modals (Put them outside app-layout so z-index works perfectly) ══ #}
-
+{% include 'components/confirm_modal.html' %}
 <script src="/static/js/layout.js"></script>
-
-<script src="/static/js/[page_name].js"></script>
-
+<script src="/static/js/dashboard.js"></script>
 </body>
 </html>

@@ -3,52 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KNE Vape Shop | [Page Name]</title>
-    
+    <title>KNE Vape Shop | Reports</title>
     <script>(function(){var t=localStorage.getItem('kne_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="app-page">
 
 <div class="app-layout">
-
-    {# ── Sidebar ─────────────────────────────────────────── #}
     {% include 'components/sidebar.html' %}
 
-    {# ── Main column ─────────────────────────────────────── #}
     <main class="main-content">
-
-        {# ── Sticky header ───────────────────────────────── #}
-        {% set page_title = "[Page Title]" %}
+        {% set page_title = "Reports & Analytics" %}
         {% include 'components/header.html' %}
 
-        {# ── Scrollable page body ────────────────────────── #}
         <div class="page-body">
-
             <div id="sysMsg" class="alert"></div>
 
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title-group">
-                        <div class="panel-eyebrow">Category</div>
-                        <div class="panel-title">Main Panel</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Total Revenue</span>
+                        <div class="stat-icon" style="background:var(--green-soft);">
+                            <svg fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
                     </div>
+                    <div class="stat-value currency" id="repRevenue" style="color:var(--green);">--</div>
                 </div>
-                <div class="panel-body" style="padding: 20px;">
-                    <p class="text-muted">Content goes here...</p>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Products Sold</span>
+                        <div class="stat-icon" style="background:var(--accent-soft);">
+                            <svg fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="repSold">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Inventory Value</span>
+                        <div class="stat-icon" style="background:var(--surface-3);">
+                            <svg fill="none" stroke="var(--text-1)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value currency" id="repValue" style="color:var(--text-1);">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Total Loss (Defects)</span>
+                        <div class="stat-icon" style="background:var(--red-soft);">
+                            <svg fill="none" stroke="var(--red)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value currency" id="repLoss" style="color:var(--red);">--</div>
                 </div>
             </div>
 
-        </div>{# /page-body #}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+                <div class="panel">
+                    <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 0;">
+                        <div>
+                            <div class="panel-eyebrow">Distribution</div>
+                            <div class="panel-title">Stock Analysis</div>
+                        </div>
+                        <div class="tabs" style="border-bottom: none; padding: 0; gap: 8px;">
+                            <div class="tab active" id="tab-category" onclick="switchDistTab('category')">Category</div>
+                            <div class="tab" id="tab-brand" onclick="switchDistTab('brand')">Brand</div>
+                            <div class="tab" id="tab-flavor" onclick="switchDistTab('flavor')">Flavor</div>
+                        </div>
+                    </div>
+                    <div style="padding: 20px; height: 280px; display: flex; justify-content: center; align-items: center; border-top: 1px solid var(--border);">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-eyebrow">Health Assessment</div>
+                        <div class="panel-title">Active vs Defective Units</div>
+                    </div>
+                    <div style="padding: 20px; height: 280px; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="healthChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+                <div class="panel panel-accent-purple">
+                    <div class="panel-header">
+                        <div class="panel-title">Recent Sales Activity</div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Sale #</th><th>Date</th><th>Items</th><th>Total</th></tr>
+                            </thead>
+                            <tbody id="repSalesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel panel-accent-red">
+                    <div class="panel-header">
+                        <div class="panel-title">Recent Losses / Defects</div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>SKU</th><th>Qty</th><th>Reason</th><th>Date</th></tr>
+                            </thead>
+                            <tbody id="repDefectBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </main>
-</div>{# /app-layout #}
+</div>
 
-
-{# ══ Modals (Put them outside app-layout so z-index works perfectly) ══ #}
-
+{% include 'components/confirm_modal.html' %}
 <script src="/static/js/layout.js"></script>
-
-<script src="/static/js/[page_name].js"></script>
-
+<script src="/static/js/reports.js"></script>
 </body>
 </html>

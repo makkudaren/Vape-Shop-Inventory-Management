@@ -40,3 +40,18 @@ class BatchDefectRequest(BaseModel):
 class DefectResolve(BaseModel):
     action: str
     quantity: int
+
+class CartItem(BaseModel):
+    product_id: int
+    quantity: int
+
+class CheckoutRequest(BaseModel):
+    items: List[CartItem]
+    discount: float = 0.0
+    tax: float = 0.0
+    service_fee: float = 0.0
+
+class StoreSettingsUpdate(BaseModel):
+    global_discount: float
+    global_tax: float
+    service_fee: float

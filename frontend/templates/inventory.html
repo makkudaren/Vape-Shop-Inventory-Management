@@ -109,11 +109,13 @@
                             <input type="text" id="searchInput" placeholder="SKU, title, flavor…" onkeyup="delaySearch()">
                         </div>
                         <select id="filterCategory" class="filter-select" onchange="loadInventory()">
-                            <option value="">All Types</option>
-                            <option value="E-Liquid">E-Liquid</option>
-                            <option value="Disposables">Disposables</option>
-                            <option value="Hardware">Hardware</option>
-                            <option value="Accessories">Accessories</option>
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="filterBrand" class="filter-select" onchange="loadInventory()">
+                            <option value="">All Brands</option>
+                        </select>
+                        <select id="filterFlavor" class="filter-select" onchange="loadInventory()">
+                            <option value="">All Flavors</option>
                         </select>
                         <select id="sortBy" class="filter-select" onchange="loadInventory()">
                             <option value="created_at">Newest First</option>
@@ -499,9 +501,7 @@
         </div>
     </div>
 </div>
-
 {% include 'components/confirm_modal.html' %}
-
 <script src="/static/js/layout.js"></script>
 <script src="/static/js/inventory.js"></script>
 </body>

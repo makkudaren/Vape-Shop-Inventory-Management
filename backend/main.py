@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from backend.database import engine, Base
 from backend.routers import auth
 from backend.routers import auth, inventory
+from backend.routers import sales
 
 # Initialize DB models
 Base.metadata.create_all(bind=engine)
@@ -17,6 +18,7 @@ templates = Jinja2Templates(directory="frontend/templates")
 # Include Routers
 app.include_router(auth.router)
 app.include_router(inventory.router)
+app.include_router(sales.router)
 
 # Frontend Routes
 @app.get("/")

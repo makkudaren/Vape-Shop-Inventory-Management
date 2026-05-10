@@ -25,21 +25,36 @@ def log_action(db: Session, user_id: int, action: str, target: str):
 def get_inventory(
     search: Optional[str] = None,
     category: Optional[str] = None,
+    brand: Optional[str] = None,
+    flavor: Optional[str] = None,
     sort: str = "created_at",
     page: int = Query(1, ge=1),
-    limit: int = Query(20, le=100),
+    limit: int = Query(20, le=2000),
     db: Session = Depends(get_db)
 ):
     query = db.query(Product)
-    if search:
-        from sqlalchemy import or_ # ensure this is imported at the top
+    
+    # 1. Search Bar 
+    if search and search.strip():
+        from sqlalchemy import or_ 
+        clean_search = search.strip()
         query = query.filter(or_(
-            Product.sku.ilike(f"%{search}%"),
-            Product.title.ilike(f"%{search}%"),
-            Product.flavor.ilike(f"%{search}%")
+            Product.sku.ilike(f"%{clean_search}%"),
+            Product.title.ilike(f"%{clean_search}%"),
+            Product.flavor.ilike(f"%{clean_search}%")
         ))
-    if category:
-        query = query.filter(Product.category == category)
+        
+    # 2. Dropdown Filters (Upgraded to ignore spaces and case-sensitivity!)
+    if category and category.strip():
+        query = query.filter(Product.category.ilike(category.strip()))
+        
+    if brand and brand.strip():
+        query = query.filter(Product.brand.ilike(brand.strip()))
+        
+    if flavor and flavor.strip():
+        query = query.filter(Product.flavor.ilike(flavor.strip()))
+        
+    # 3. Sorting
     if sort == "updated_at":
         query = query.order_by(desc(Product.updated_at))
     elif sort == "stock_low":
@@ -53,8 +68,9 @@ def get_inventory(
     else:
         query = query.order_by(desc(Product.created_at))
     
+    # 4. Pagination
     total = query.count()
-    products = query.order_by(desc(Product.created_at)).offset((page - 1) * limit).limit(limit).all()
+    products = query.offset((page - 1) * limit).limit(limit).all()
     
     result_data = []
     for p in products:
@@ -395,6 +411,16 @@ def get_categories(db: Session = Depends(get_db)):
     
     # SQLAlchemy returns a list of tuples like [('E-Liquid',), ('Hardware',)]
     return [cat[0] for cat in categories if cat[0]]
+
+@router.get("/brands")
+def get_brands(db: Session = Depends(get_db)):
+    brands = db.query(Product.brand).distinct().all()
+    return [b[0] for b in brands if b[0]]
+
+@router.get("/flavors")
+def get_flavors(db: Session = Depends(get_db)):
+    flavors = db.query(Product.flavor).distinct().all()
+    return [f[0] for f in flavors if f[0]]
 
 @router.get("/autocomplete")
 def autocomplete_products(q: str = Query(""), db: Session = Depends(get_db)):

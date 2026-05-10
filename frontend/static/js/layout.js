@@ -36,15 +36,8 @@ function closeMobileSidebar() {
 
 // ── Responsive ────────────────────────────────────────────
 function checkMobile() {
-    const mobile        = window.innerWidth <= 768;
-    const mobileBtn     = document.getElementById('mobileMenuBtn');
-    const desktopToggle = document.getElementById('desktopToggle');
-    if (mobile) {
-        if (mobileBtn)     mobileBtn.style.display    = 'flex';
-        if (desktopToggle) desktopToggle.style.display = 'none';
-    } else {
-        if (mobileBtn)     mobileBtn.style.display    = 'none';
-        if (desktopToggle) desktopToggle.style.display = 'flex';
+    const mobile = window.innerWidth <= 768;
+    if (!mobile) {
         document.getElementById('sidebar')?.classList.remove('mobile-open');
         document.getElementById('sidebarBackdrop')?.classList.remove('active');
     }
@@ -52,7 +45,7 @@ function checkMobile() {
 
 // ── User chip ──────────────────────────────────────────────
 function populateUserChip() {
-    const name     = localStorage.getItem('kne_user_name') || '';
+    const name = localStorage.getItem('user_name') || ''; 
     const initials = name
         ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
         : '?';
@@ -70,23 +63,18 @@ function closeModal(id) { document.getElementById(id)?.classList.remove('open');
 let currentConfirmCallback = null;
 
 function showConfirmModal(title, message, confirmText, confirmClass, callback) {
-    // 1. Set the text
     document.getElementById('confirmModalTitle').innerText = title;
     document.getElementById('confirmModalMessage').innerText = message;
 
-    // 2. Style the confirm button dynamically (e.g., Red for Delete, Blue for Save)
     const actionBtn = document.getElementById('confirmModalActionBtn');
     actionBtn.innerText = confirmText || 'Confirm';
     actionBtn.className = `btn ${confirmClass || 'btn-danger'}`;
 
-    // 3. Store the action we want to perform if they click yes
     currentConfirmCallback = callback;
 
-    // 4. Open the modal
     const modal = document.getElementById('globalConfirmModal');
     if (modal) {
         modal.style.display = 'flex';
-        // Tiny timeout to allow display:flex to apply before the opacity animation fires
         setTimeout(() => modal.classList.add('open'), 10);
     }
 }
@@ -95,75 +83,20 @@ function closeConfirmModal() {
     const modal = document.getElementById('globalConfirmModal');
     if (modal) {
         modal.classList.remove('open');
-        setTimeout(() => modal.style.display = 'none', 200); // Matches your CSS transition time
+        setTimeout(() => modal.style.display = 'none', 200); 
     }
-    currentConfirmCallback = null; // Clear the memory
+    currentConfirmCallback = null; 
 }
 
-// Attach the listener to the Confirm button once
-document.addEventListener('DOMContentLoaded', () => {
-    const actionBtn = document.getElementById('confirmModalActionBtn');
-    if (actionBtn) {
-        actionBtn.addEventListener('click', () => {
-            if (currentConfirmCallback) {
-                currentConfirmCallback();
-            }
-            closeConfirmModal();
-        });
-    }
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-
-    // Restore sidebar collapsed state from previous session
-    if (localStorage.getItem('kne_sidebar') === 'collapsed') {
-        const sidebar = document.getElementById('sidebar');
-        const btn     = document.getElementById('desktopToggle');
-        if (sidebar) sidebar.classList.add('collapsed');
-        if (btn)     btn.style.transform = 'rotate(180deg)';
-    }
-
-    const sidebar = document.getElementById('sidebar');
-    const navLinks = document.querySelectorAll('.nav-item');
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            if (sidebar && sidebar.classList.contains('collapsed')) {
-                sidebar.classList.remove('collapsed');
-                const btn = document.getElementById('desktopToggle');
-                if (btn) btn.style.transform = '';
-                localStorage.setItem('kne_sidebar', 'open');
-            }
-        });
-    });
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    populateUserChip();
-
-    // Modal: close on backdrop click + shim for style.display toggling
-    document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) closeModal(overlay.id);
-        });
-        new MutationObserver(function () {
-            if (overlay.style.display === 'flex') overlay.classList.add('open');
-            else if (overlay.style.display === 'none') overlay.classList.remove('open');
-        }).observe(overlay, { attributes: true, attributeFilter: ['style'] });
-    });
-});
-
 // ── Global Logout Function ─────────────────────────────────
-async function logout() {
+function logout() {
     showConfirmModal(
         "Sign Out",
         "Are you sure you want to sign out? You will need to log in again to access your inventory.",
         "Sign Out",
         "btn-danger",
         async () => {
-            // EVERYTHING IN HERE RUNS ONLY IF THEY CLICK "SIGN OUT"
             const token = localStorage.getItem("access_token");
-
-            // 1. Tell the backend to invalidate this specific token
             if (token) {
                 try {
                     await fetch("/api/auth/logout", {
@@ -178,13 +111,63 @@ async function logout() {
                 }
             }
 
-            // 2. Wipe the user's data from the browser's memory
             localStorage.removeItem("access_token");
             localStorage.removeItem("user_role");
             localStorage.removeItem("user_name");
-
-            // 3. Kick them back to the login screen
             window.location.href = "/login";
         }
     );
 }
+
+// ── MASTER EVENT LISTENER (Runs once when page loads) ──────
+document.addEventListener('DOMContentLoaded', function () {
+    
+    // 1. Setup mobile/desktop responsive tracking
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    // 2. Populate the profile name in the top right
+    populateUserChip();
+
+    // 3. Attach the Global Confirm Modal Button logic
+    const actionBtn = document.getElementById('confirmModalActionBtn');
+    if (actionBtn) {
+        actionBtn.addEventListener('click', () => {
+            if (currentConfirmCallback) {
+                currentConfirmCallback();
+            }
+            closeConfirmModal();
+        });
+    }
+
+    // 4. Sidebar Link Logic (Highlighting & Mobile Close)
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.nav-item');
+
+    navLinks.forEach(link => {
+        // Make the active page turn purple
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+
+        // Only close the menu if clicking on a mobile device
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                closeMobileSidebar();
+            }
+        });
+    });
+
+    // 5. General Modal Logic (Click background to close)
+    document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal(overlay.id);
+        });
+        new MutationObserver(function () {
+            if (overlay.style.display === 'flex') overlay.classList.add('open');
+            else if (overlay.style.display === 'none') overlay.classList.remove('open');
+        }).observe(overlay, { attributes: true, attributeFilter: ['style'] });
+    });
+});

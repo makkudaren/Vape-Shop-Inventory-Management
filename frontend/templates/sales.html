@@ -2,53 +2,169 @@
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KNE Vape Shop | [Page Name]</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNE Vape Shop | Sales POS</title>
     <script>(function(){var t=localStorage.getItem('kne_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="app-page">
 
 <div class="app-layout">
-
-    {# ── Sidebar ─────────────────────────────────────────── #}
     {% include 'components/sidebar.html' %}
 
-    {# ── Main column ─────────────────────────────────────── #}
     <main class="main-content">
-
-        {# ── Sticky header ───────────────────────────────── #}
-        {% set page_title = "[Page Title]" %}
+        {% set page_title = "Point of Sale" %}
         {% include 'components/header.html' %}
 
-        {# ── Scrollable page body ────────────────────────── #}
-        <div class="page-body">
-
+        <div class="page-body" style="padding-bottom: 0;">
             <div id="sysMsg" class="alert"></div>
 
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title-group">
-                        <div class="panel-eyebrow">Category</div>
-                        <div class="panel-title">Main Panel</div>
+            <div class="pos-layout">
+                <div class="pos-cart-panel">
+                    <div class="panel-header" style="background: var(--surface-2);">
+                        <div class="panel-title" style="font-size:16px;">Current Order</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-icon" id="cartOptionsBtn" onclick="openCartOptions()" title="Order Options" style="display: none; padding: 4px; color: var(--text-2);">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </button>
+                            <button class="btn btn-ghost" onclick="clearCart()" style="padding: 4px 8px; font-size:12px;">Clear</button>
+                        </div>
+                    </div>
+                    
+                    <div class="cart-items" id="cartItemsContainer">
+                        <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:48px; height:48px; margin-bottom:12px; color:var(--border-hover);">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                            <p style="font-weight: 600; color: var(--text-1); margin-bottom: 4px; font-size: 15px;">Cart is empty</p>
+                            <p style="font-size: 13px; color: var(--text-2); margin: 0;">Tap products on the right to start an order.</p>
+                        </div>
+                    </div>
+
+                    <div class="cart-summary">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span id="cartSubtotal" style="color:var(--text-1); font-weight:600;">₱0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Discount</span>
+                            <span id="cartDiscountDisplay" style="color:var(--text-1); font-weight:600;">₱0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span id="cartTaxLabel">Tax</span> 
+                            <span id="cartTaxDisplay" style="color:var(--text-1); font-weight:600;">₱0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Service Fee</span>
+                            <span id="cartServiceDisplay" style="color:var(--text-1); font-weight:600;">₱0.00</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total</span>
+                            <span id="cartTotal">₱0.00</span>
+                        </div>
+                        <button class="btn btn-primary btn-full" id="checkoutBtn" onclick="checkout()" style="height:48px; font-size:16px; margin-top:12px;">
+                            Confirm Checkout (<span id="cartItemCount">0</span>)
+                        </button>
                     </div>
                 </div>
-                <div class="panel-body" style="padding: 20px;">
-                    <p class="text-muted">Content goes here...</p>
+
+                <div class="pos-products-panel">
+                    <div class="panel-header" style="flex-wrap: wrap; gap: 10px; padding: 12px 16px;">
+                        <div class="search-box" style="flex: 1; min-width: 180px;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <input type="text" id="posSearch" placeholder="Search products..." onkeyup="delayPosSearch()">
+                        </div>
+                        
+                        <select id="posCategory" class="filter-select" onchange="loadPosProducts()">
+                            <option value="">All Categories</option>
+                        </select>
+                        
+                        <select id="posBrand" class="filter-select" onchange="loadPosProducts()">
+                            <option value="">All Brands</option>
+                        </select>
+                        
+                        <select id="posFlavor" class="filter-select" onchange="loadPosProducts()">
+                            <option value="">All Flavors</option>
+                        </select>
+                        
+                        <select id="posSort" class="filter-select" onchange="loadPosProducts()">
+                            <option value="stock_high">Stock: High → Low</option>
+                            <option value="stock_low">Stock: Low → High</option>
+                            <option value="price_low">Price: Low → High</option>
+                            <option value="price_high">Price: High → Low</option>
+                            <option value="created_at">Newest First</option>
+                        </select>
+                        
+                        <button class="btn btn-ghost" id="clearPosBtn" onclick="clearPosFilters()" style="display: none; padding: 9px 12px; color: var(--text-2);">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            Clear
+                        </button>
+                        
+                        <button class="btn-icon" onclick="openSalesHistory()" title="Sales History">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="pos-grid" id="posProductGrid">
+                        </div>
                 </div>
             </div>
-
-        </div>{# /page-body #}
+        </div>
     </main>
-</div>{# /app-layout #}
+</div>
 
+<div class="modal-overlay" id="salesHistoryModal">
+    <div class="modal modal-wide">
+        <div class="modal-header">
+            <h3>Recent Transactions</h3>
+            <button class="btn-icon" onclick="closeModal('salesHistoryModal')">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="modal-body table-wrap" style="padding:0;">
+            <table style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Sale ID</th><th>Date</th><th>Cashier</th><th>Items Bought</th><th>Discount</th><th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="salesHistoryBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-{# ══ Modals (Put them outside app-layout so z-index works perfectly) ══ #}
-
+<div class="modal-overlay" id="cartOptionsModal">
+    <div class="modal" style="max-width: 350px;">
+        <div class="modal-header">
+            <h3>Order Options</h3>
+            <button class="btn-icon" onclick="closeModal('cartOptionsModal')">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label>Global Discount (₱)</label>
+                <input type="number" id="modalDiscount" min="0" step="0.01">
+            </div>
+            <div class="field">
+                <label>Global Tax (%)</label> <input type="number" id="modalTax" min="0" step="0.1">
+            </div>
+            <div class="field">
+                <label>Service Fee (₱)</label>
+                <input type="number" id="modalService" min="0" step="0.01">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('cartOptionsModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveCartOptions()">Save Options</button>
+        </div>
+    </div>
+</div>
+{% include 'components/confirm_modal.html' %}
 <script src="/static/js/layout.js"></script>
-
-<script src="/static/js/[page_name].js"></script>
-
+<script src="/static/js/sales.js"></script>
 </body>
 </html>
