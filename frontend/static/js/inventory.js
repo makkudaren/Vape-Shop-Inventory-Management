@@ -7,10 +7,71 @@ const headers = {
     "Authorization": `Bearer ${token}`
 };
 
+// ── Server-Side Autocomplete Brain ─────────────────────────
+let autocompleteCache = [];
+let autocompleteTimer;
+
+// This watches the entire page for typing in ANY input attached to "skuList"
+document.addEventListener("input", function (e) {
+    if (e.target.hasAttribute("list") && e.target.getAttribute("list") === "skuList") {
+        const val = e.target.value.trim();
+
+        // 1. Did they type or click a perfect SKU match?
+        const matched = autocompleteCache.find(p => p.sku === val);
+        
+        if (matched) {
+            // Auto-fill Batch Add row
+            if (e.target.classList.contains("ba-sku")) {
+                const tr = e.target.closest("tr");
+                tr.querySelector(".ba-title").value  = matched.title    || "";
+                tr.querySelector(".ba-brand").value  = matched.brand    || "";
+                tr.querySelector(".ba-flavor").value = matched.flavor   || "";
+                tr.querySelector(".ba-cat").value    = matched.category || "";
+                tr.querySelector(".ba-price").value  = matched.price    || "";
+            } 
+            // Auto-fill Single Product Add/Edit
+            else if (e.target.id === "p_sku") {
+                document.getElementById("p_title").value  = matched.title    || "";
+                document.getElementById("p_brand").value  = matched.brand    || "";
+                document.getElementById("p_flavor").value = matched.flavor   || "";
+                document.getElementById("p_cat").value    = matched.category || "";
+                document.getElementById("p_price").value  = matched.price    || "";
+            }
+            return; // Stop here! No need to hit the server.
+        }
+
+        // 2. Not a perfect match yet? Fetch suggestions from the server!
+        if (val.length < 2) return; // Wait until they type at least 2 characters
+
+        clearTimeout(autocompleteTimer);
+        
+        // Debounce: Wait 300ms after they stop typing before asking the server
+        autocompleteTimer = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/inventory/autocomplete?q=${val}`, { headers });
+                autocompleteCache = await res.json();
+
+                // Inject the new matches into the HTML datalist
+                const datalist = document.getElementById("skuList");
+                datalist.innerHTML = ""; 
+                autocompleteCache.forEach(p => {
+                    datalist.innerHTML += `<option value="${p.sku}">${p.title} (${p.brand})</option>`;
+                });
+            } catch (err) {
+                console.error("Autocomplete failed:", err);
+            }
+        }, 300);
+    }
+});
+
 // ── Utilities ──────────────────────────────────────────────
 function formatTimeAgo(dateString) {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
+    let safeDate = dateString;
+    if (!safeDate.endsWith("Z")) {
+        safeDate += "Z"; 
+    }
+    const date = new Date(safeDate);
     
     // Uses the compact style AND forces it to Philippine Time
     return date.toLocaleString('en-US', { 
@@ -24,23 +85,30 @@ function showSysMsg(msg, isError) {
     const el = document.getElementById("sysMsg");
     if (!el) return;
     
+
+    // If FastAPI sends back a validation array, extract the first readable error
+    let safeMsg = msg;
+    if (Array.isArray(msg) && msg.length > 0) {
+        // Formats the error nicely, e.g., "price: Input should be a valid number"
+        const fieldName = msg[0].loc && msg[0].loc[1] ? msg[0].loc[1] : "Input";
+        safeMsg = `${fieldName}: ${msg[0].msg}`;
+    } else if (typeof msg === "object") {
+        safeMsg = "An unexpected error occurred.";
+    }
+    
     el.className = `alert ${isError ? "error" : "success"} show`;
     el.style.display = "flex"; 
     
-    // Shrunk SVG icons (16x16) and made the checkmark slightly thicker (stroke-width 3)
     const icon = isError 
         ? `<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`
         : `<svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
         
-    el.innerHTML = `${icon} <span>${msg}</span>`;
+    el.innerHTML = `${icon} <span>${safeMsg}</span>`;
     
     if (window.sysMsgTimeout) clearTimeout(window.sysMsgTimeout);
     
-    // Faster dismiss (3 seconds) for a snappier feel
     window.sysMsgTimeout = setTimeout(() => { 
         el.classList.remove("show"); 
-        
-        // Wait 400ms to match the new CSS transition length before hiding
         setTimeout(() => {
             if (!el.classList.contains("show")) el.style.display = "none";
         }, 400); 
@@ -68,7 +136,8 @@ const catIcons = {
     "E-Liquid":    `<svg fill="none" stroke="currentColor" width="24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>`,
     "Disposables": `<svg fill="none" stroke="currentColor" width="24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v8l9-11h-7z"></path></svg>`,
     "Hardware":    `<svg fill="none" stroke="currentColor" width="24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
-    "Accessories": `<svg fill="none" stroke="currentColor" width="24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>`
+    "Accessories": `<svg fill="none" stroke="currentColor" width="24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>`,
+    "Default":     `<svg fill="none" stroke="currentColor" width="24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`
 };
 
 // ── Pagination State ───────────────────────────────────────
@@ -89,30 +158,16 @@ function delaySearch() {
     }, 350);
 }
 
-// ── Global Products Cache (for autocomplete) ───────────────
-let globalProductsList = [];
-
 // ── DOMContentLoaded — single combined listener ────────────
 document.addEventListener("DOMContentLoaded", () => {
     loadSummary();
+    loadCategories();
     loadInventory();
     loadDefectives();
-    fetchAllProductsForDropdowns();
 
     // Single-product modal: auto-fill on SKU match
     const singleSkuInput = document.getElementById("p_sku");
     if (singleSkuInput) {
-        singleSkuInput.addEventListener("input", function () {
-            const val = this.value.trim();
-            const matched = globalProductsList.find(p => p.sku === val);
-            if (matched) {
-                document.getElementById("p_title").value  = matched.title    || "";
-                document.getElementById("p_brand").value  = matched.brand    || "";
-                document.getElementById("p_flavor").value = matched.flavor   || "";
-                document.getElementById("p_cat").value    = matched.category || "";
-                document.getElementById("p_price").value  = matched.price    || "";
-            }
-        });
     }
 });
 
@@ -223,7 +278,7 @@ async function loadInventory() {
             tr.onclick = () => openProductModal(p);
             const badgeClass = p.status === "In Stock" ? "success" : p.status === "Low Stock" ? "warning" : "error";
             tr.innerHTML = `
-                <td style="color:var(--text-secondary)">${catIcons[p.category] || catIcons["Accessories"]}</td>
+                <td style="color:var(--text-secondary)">${catIcons[p.category] || catIcons["Default"]}</td>
                 <td><strong>${p.sku}</strong></td>
                 <td>${p.title}<br><span style="font-size:12px;color:var(--text-secondary)">${p.brand} · ${p.flavor}</span></td>
                 <td>${p.category}</td>
@@ -311,7 +366,7 @@ async function loadDefectives() {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                                 <p style="font-weight: 600; color: var(--text-1); margin-bottom: 4px; font-size: 16px;">Looking good!</p>
-                                <p>You have zero defective products in your database right now.</p>
+                                <p>You have zero defective products in your inventory right now.</p>
                             </div>
                         </td>
                     </tr>
@@ -333,6 +388,7 @@ async function loadDefectives() {
                 <td style="color:var(--red); font-weight:bold;">-${d.quantity}</td>
                 <td>${d.reason}</td>
                 <td><span style="font-size:12px; color:var(--text-2)">${d.reporter}</span></td>
+                <td style="font-size:12px; color:var(--text-2); white-space:nowrap;">${formatTimeAgo(d.updated_at)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -378,15 +434,19 @@ function openProductModal(p = null) {
     document.getElementById("p_price").value  = p ? p.price    : "";
     document.getElementById("p_stock").value  = p ? p.stock    : "";
 
+    const deleteBtn = document.getElementById("deleteProductBtn");
+
     if (p) {
         document.getElementById("modalTitle").innerText             = `Edit: ${p.sku}`;
         document.getElementById("defectTabBtn").style.display       = "block";
         document.getElementById("historyTabBtn").style.display      = "block";
+        deleteBtn.style.display                                     = "flex";
         loadHistory(p.id);
     } else {
         document.getElementById("modalTitle").innerText             = "Add New Product";
         document.getElementById("defectTabBtn").style.display       = "none";
         document.getElementById("historyTabBtn").style.display      = "none";
+        deleteBtn.style.display                                     = "none";
     }
 
     switchTab("details");
@@ -445,7 +505,7 @@ async function saveProduct() {
             showSysMsg("Product saved successfully.", false);
             loadInventory();
             loadSummary();
-            fetchAllProductsForDropdowns();
+            loadCategories();
         } else {
             const err = await res.json();
             showSysMsg(err.detail || "Error saving product.", true);
@@ -453,6 +513,39 @@ async function saveProduct() {
     } catch {
         showSysMsg("Network error saving product.", true);
     }
+}
+
+async function deleteProduct() {
+    // Grab the hidden ID from the modal
+    const id = document.getElementById("p_id").value;
+    if (!id) return;
+
+    // Trigger confirmation modal
+    showConfirmModal(
+        "Delete Product",
+        "Are you sure you want to permanently delete this product? This will also wipe its history and defect logs. This cannot be undone.",
+        "Permanently Delete",
+        "btn-danger",
+        async () => {
+            // EVERYTHING IN HERE RUNS ONLY IF THEY CLICK YES
+            try {
+                const res = await fetch(`/api/inventory/${id}`, { method: "DELETE", headers });
+                if (res.ok) {
+                    closeModal("productModal");
+                    showSysMsg("Product permanently deleted.", false);
+                    loadInventory();
+                    loadSummary();
+                    loadCategories();
+                    loadDefectives(); 
+                } else {
+                    const data = await res.json();
+                    showSysMsg(data.detail || "Failed to delete product.", true);
+                }
+            } catch (error) {
+                showSysMsg("Network error deleting product.", true);
+            }
+        }
+    );
 }
 
 // ── 7. Report Defect (single product) ─────────────────────
@@ -518,11 +611,18 @@ async function loadHistory(id) {
         }
 
         data.forEach(log => {
-            const d = new Date(log.date).toLocaleString();
+            const d = formatTimeAgo(log.date);
+            
+            const formattedAction = log.action.replace(/\n/g, '<br>');
+            
             ul.innerHTML += `
-                <li style="padding:10px 0; border-bottom:1px solid var(--border-color);">
-                    <strong style="color:var(--text-primary)">${log.action}</strong><br>
-                    <span style="color:var(--text-secondary)">By ${log.user} on ${d}</span>
+                <li style="padding:12px 0; border-bottom:1px solid var(--border-color);">
+                    <div style="color:var(--text-primary); font-size:13px; line-height:1.6; margin-bottom:4px;">
+                        ${formattedAction}
+                    </div>
+                    <div style="color:var(--text-secondary); font-size:11px;">
+                        By ${log.user} on ${d}
+                    </div>
                 </li>
             `;
         });
@@ -551,19 +651,6 @@ function addBatchAddRow() {
         <td style="padding:4px;"><input type="number" class="ba-stock"                     placeholder="Qty"          style="width:100%;padding:10px;"></td>
         <td style="padding:4px;"><button onclick="this.closest('tr').remove()" style="background:var(--red);color:white;border:none;padding:10px;border-radius:10px;cursor:pointer;">✕</button></td>
     `;
-
-    tr.querySelector(".ba-sku").addEventListener("input", function () {
-        const val     = this.value.trim();
-        const matched = globalProductsList.find(p => p.sku === val);
-        if (matched) {
-            this.value = matched.sku;
-            tr.querySelector(".ba-title").value  = matched.title    || "";
-            tr.querySelector(".ba-brand").value  = matched.brand    || "";
-            tr.querySelector(".ba-flavor").value = matched.flavor   || "";
-            tr.querySelector(".ba-cat").value    = matched.category || "";
-            tr.querySelector(".ba-price").value  = matched.price    || "";
-        }
-    });
 
     tbody.appendChild(tr);
 }
@@ -617,7 +704,7 @@ async function submitBatchAdd() {
             showSysMsg(data.message, false);
             loadInventory();
             loadSummary();
-            fetchAllProductsForDropdowns();
+            loadCategories();
         } else {
             showSysMsg(data.detail || "Error submitting batch.", true);
         }
@@ -674,7 +761,7 @@ async function submitBatchDefect() {
         if (!skuInput) return; // Skip totally blank rows
 
         // 1. Strict Validation: Check if the SKU exists
-        const matchedProduct = globalProductsList.find(p => p.sku === skuInput);
+        const matchedProduct = autocompleteCache.find(p => p.sku === skuInput);
         if (!matchedProduct) {
             showSysMsg(`SKU "${skuInput}" not found in database.`, true);
             hasError = true;
@@ -759,75 +846,36 @@ async function resolveDefectRecord(actionType) {
         return showSysMsg("Please enter a valid quantity to process.", true);
     }
     
-    // Give the user a clear warning based on quantity and action
+    // Setup dynamic text and colors based on action
+    const title = actionType === 'return' ? "Return to Stock" : "Write-off Inventory";
     const confirmMsg = actionType === 'return' 
         ? `Are you sure you want to RETURN ${qtyToProcess} item(s) back to active stock?` 
         : `Are you sure you want to permanently WRITE-OFF ${qtyToProcess} item(s) as a loss?`;
-        
-    if(!confirm(confirmMsg)) return;
+    const btnText = actionType === 'return' ? "Return Items" : "Write-off Loss";
+    const btnClass = actionType === 'return' ? "btn-primary" : "btn-danger";
 
-    try {
-        const res = await fetch(`/api/inventory/defective/${id}/resolve`, { 
-            method: "POST", 
-            headers,
-            body: JSON.stringify({ 
-                action: actionType, 
-                quantity: qtyToProcess // Send the specific quantity to the backend
-            }) 
-        });
-        const data = await res.json();
-        
-        if(res.ok) {
-            closeModal('defectEditModal');
-            showSysMsg(data.message, false);
-            loadInventory();
-            loadDefectives();
-            loadSummary();
-        } else {
-            showSysMsg(data.detail, true);
-        }
-    } catch(e) { showSysMsg("Error resolving defect.", true); }
-}
-
-// ── 12. Autocomplete Datalists ─────────────────────────────
-async function fetchAllProductsForDropdowns() {
-    try {
-        const res = await fetch("/api/inventory/all-list", { headers });
-        globalProductsList = await res.json();
-
-        const skuList      = document.getElementById("skuList");
-        const titleList    = document.getElementById("titleList");
-        const brandList    = document.getElementById("brandList");
-        const flavorList   = document.getElementById("flavorList");
-        const catList      = document.getElementById("categoryList");
-
-        skuList.innerHTML = titleList.innerHTML =
-        brandList.innerHTML = flavorList.innerHTML = catList.innerHTML = "";
-
-        const titles     = new Set();
-        const brands     = new Set();
-        const flavors    = new Set();
-        const categories = new Set(["E-Liquid", "Disposables", "Hardware", "Accessories"]);
-
-        globalProductsList.forEach(p => {
-            const opt       = document.createElement("option");
-            opt.value       = p.sku;
-            opt.textContent = `${p.title} (${p.brand})`;
-            skuList.appendChild(opt);
-
-            if (p.title)    titles.add(p.title);
-            if (p.brand)    brands.add(p.brand);
-            if (p.flavor)   flavors.add(p.flavor);
-            if (p.category) categories.add(p.category);
-        });
-
-        titles.forEach(t     => titleList.innerHTML  += `<option value="${t}">`);
-        brands.forEach(b     => brandList.innerHTML  += `<option value="${b}">`);
-        flavors.forEach(f    => flavorList.innerHTML += `<option value="${f}">`);
-        categories.forEach(c => catList.innerHTML    += `<option value="${c}">`);
-    } catch {
-        console.error("Failed to load product autocomplete lists.");
-    }
+    // Trigger the beautiful UI Modal
+    showConfirmModal(title, confirmMsg, btnText, btnClass, async () => {
+        // RUNS ONLY IF THEY CLICK YES
+        try {
+            const res = await fetch(`/api/inventory/defective/${id}/resolve`, { 
+                method: "POST", 
+                headers,
+                body: JSON.stringify({ action: actionType, quantity: qtyToProcess }) 
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                closeModal('defectEditModal');
+                showSysMsg(data.message, false);
+                loadInventory();
+                loadDefectives();
+                loadSummary();
+            } else {
+                showSysMsg(data.detail, true);
+            }
+        } catch(e) { showSysMsg("Error resolving defect.", true); }
+    });
 }
 
 function openSingleDefectModal() {
@@ -846,7 +894,7 @@ async function submitSingleDefect() {
     const qty = parseInt(document.getElementById("sd_qty").value);
 
     // 1. Strict Validation: Check if the product exists in the database
-    const matchedProduct = globalProductsList.find(p => p.sku === skuInput);
+    const matchedProduct = autocompleteCache.find(p => p.sku === skuInput);
 
     if (!matchedProduct) {
         return showSysMsg(`Product with SKU "${skuInput}" not found.`, true);
@@ -880,5 +928,33 @@ async function submitSingleDefect() {
         }
     } catch {
         showSysMsg("Network error reporting defect.", true);
+    }
+}
+
+// ── 14. Dynamic Categories ─────────────────────────────────────
+async function loadCategories() {
+    try {
+        const res = await fetch("/api/inventory/categories", { headers });
+        const categories = await res.json();
+
+        const filterSelect = document.getElementById("filterCategory");
+        const modalSelect  = document.getElementById("p_cat");
+        const datalist     = document.getElementById("categoryList");
+
+        // 1. Reset the Main Filter (keep the "All Types" default option)
+        if (filterSelect) filterSelect.innerHTML = '<option value="">All Types</option>';
+        
+        // 2. Reset the Product Modal Dropdown & Datalist
+        if (modalSelect) modalSelect.innerHTML = '';
+        if (datalist) datalist.innerHTML = '';
+
+        // 3. Inject the dynamic categories into all three places
+        categories.forEach(cat => {
+            if (filterSelect) filterSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            if (modalSelect)  modalSelect.innerHTML  += `<option value="${cat}">${cat}</option>`;
+            if (datalist)     datalist.innerHTML     += `<option value="${cat}">`;
+        });
+    } catch (err) {
+        console.error("Failed to load dynamic categories:", err);
     }
 }

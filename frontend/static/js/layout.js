@@ -66,16 +66,75 @@ function populateUserChip() {
 function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
 
-// ── Bootstrap ─────────────────────────────────────────────
+// ── Global Confirmation Modal System ──────────────────────
+let currentConfirmCallback = null;
+
+function showConfirmModal(title, message, confirmText, confirmClass, callback) {
+    // 1. Set the text
+    document.getElementById('confirmModalTitle').innerText = title;
+    document.getElementById('confirmModalMessage').innerText = message;
+
+    // 2. Style the confirm button dynamically (e.g., Red for Delete, Blue for Save)
+    const actionBtn = document.getElementById('confirmModalActionBtn');
+    actionBtn.innerText = confirmText || 'Confirm';
+    actionBtn.className = `btn ${confirmClass || 'btn-danger'}`;
+
+    // 3. Store the action we want to perform if they click yes
+    currentConfirmCallback = callback;
+
+    // 4. Open the modal
+    const modal = document.getElementById('globalConfirmModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Tiny timeout to allow display:flex to apply before the opacity animation fires
+        setTimeout(() => modal.classList.add('open'), 10);
+    }
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('globalConfirmModal');
+    if (modal) {
+        modal.classList.remove('open');
+        setTimeout(() => modal.style.display = 'none', 200); // Matches your CSS transition time
+    }
+    currentConfirmCallback = null; // Clear the memory
+}
+
+// Attach the listener to the Confirm button once
+document.addEventListener('DOMContentLoaded', () => {
+    const actionBtn = document.getElementById('confirmModalActionBtn');
+    if (actionBtn) {
+        actionBtn.addEventListener('click', () => {
+            if (currentConfirmCallback) {
+                currentConfirmCallback();
+            }
+            closeConfirmModal();
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Restore sidebar collapsed state
+    // Restore sidebar collapsed state from previous session
     if (localStorage.getItem('kne_sidebar') === 'collapsed') {
         const sidebar = document.getElementById('sidebar');
         const btn     = document.getElementById('desktopToggle');
         if (sidebar) sidebar.classList.add('collapsed');
         if (btn)     btn.style.transform = 'rotate(180deg)';
     }
+
+    const sidebar = document.getElementById('sidebar');
+    const navLinks = document.querySelectorAll('.nav-item');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (sidebar && sidebar.classList.contains('collapsed')) {
+                sidebar.classList.remove('collapsed');
+                const btn = document.getElementById('desktopToggle');
+                if (btn) btn.style.transform = '';
+                localStorage.setItem('kne_sidebar', 'open');
+            }
+        });
+    });
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -92,3 +151,40 @@ document.addEventListener('DOMContentLoaded', function () {
         }).observe(overlay, { attributes: true, attributeFilter: ['style'] });
     });
 });
+
+// ── Global Logout Function ─────────────────────────────────
+async function logout() {
+    showConfirmModal(
+        "Sign Out",
+        "Are you sure you want to sign out? You will need to log in again to access your inventory.",
+        "Sign Out",
+        "btn-danger",
+        async () => {
+            // EVERYTHING IN HERE RUNS ONLY IF THEY CLICK "SIGN OUT"
+            const token = localStorage.getItem("access_token");
+
+            // 1. Tell the backend to invalidate this specific token
+            if (token) {
+                try {
+                    await fetch("/api/auth/logout", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+                } catch (err) {
+                    console.error("Backend logout network error:", err);
+                }
+            }
+
+            // 2. Wipe the user's data from the browser's memory
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("user_role");
+            localStorage.removeItem("user_name");
+
+            // 3. Kick them back to the login screen
+            window.location.href = "/login";
+        }
+    );
+}

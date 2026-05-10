@@ -11,6 +11,7 @@ from backend.utils.security import get_password_hash, verify_password, create_ac
 from backend.utils.email import send_verification_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+TOKEN_BLOCKLIST = set()
 
 class RegisterSchema(BaseModel):
     name: str
@@ -91,3 +92,13 @@ def login(data: LoginSchema, db: Session = Depends(get_db)):
         expires_delta=timedelta(minutes=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 480)))
     )
     return {"access_token": access_token, "token_type": "bearer", "role": user.role, "name": user.name}
+
+@router.post("/logout")
+def logout(request: Request):
+    """Receives the active token from the user and kills it."""
+    # We grab the token directly from the request headers to avoid circular dependencies
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        TOKEN_BLOCKLIST.add(token)
+    return {"message": "Successfully logged out"}

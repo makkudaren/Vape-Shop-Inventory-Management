@@ -100,21 +100,55 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db), current_u
     return {"message": "Product created successfully", "id": new_product.id}
 
 @router.put("/{product_id}")
-def update_product(product_id: int, data: ProductUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Block negative numbers but allow 0
-    if data.price < 0 or data.stock < 0:
-        raise HTTPException(status_code=400, detail="Price or Stock cannot be negative.")
+def update_product(product_id: int, payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    # Compare old values to new values and build the change log
+    changes = []
     
-    for key, value in data.dict().items():
-        setattr(product, key, value)
+    def check_change(field_name, old_val, new_val):
+        if str(old_val) != str(new_val):  
+            changes.append(f"• {field_name}: {old_val} ➔ {new_val}")
+
+    check_change("SKU", product.sku, payload.get("sku", product.sku))
+    check_change("Title", product.title, payload.get("title", product.title))
+    check_change("Brand", product.brand, payload.get("brand", product.brand))
+    check_change("Flavor", product.flavor, payload.get("flavor", product.flavor))
+    check_change("Category", product.category, payload.get("category", product.category))
+    check_change("Price", product.price, payload.get("price", product.price))
+    check_change("Stock", product.stock, payload.get("stock", product.stock))
+
+    # Apply the updates to the database model
+    product.sku = payload.get("sku", product.sku)
+    product.title = payload.get("title", product.title)
+    product.brand = payload.get("brand", product.brand)
+    product.flavor = payload.get("flavor", product.flavor)
+    product.category = payload.get("category", product.category)
+    product.price = payload.get("price", product.price)
+    product.stock = payload.get("stock", product.stock)
     
+    # Update status based on new stock
+    product.status = "Out of Stock" if product.stock == 0 else "Low Stock" if product.stock <= 10 else "In Stock"
+
+    if changes:
+        action_text = "Updated Product Details:\n" + "\n".join(changes)
+    else:
+        action_text = "Saved Product (No fields were changed)"
+
+    audit = AuditLog(
+        product_id=product.id,
+        target=product.sku,
+        user_id=current_user.id, 
+        action=action_text
+    )
+    
+    db.add(audit)
     db.commit()
-    log_action(db, current_user.id, "Updated Product", product.sku)
-    return {"message": "Updated successfully"}
+
+    return {"message": "Product updated successfully"}
 
 @router.post("/{product_id}/defect")
 def report_defect(product_id: int, data: DefectReport, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -197,7 +231,13 @@ def get_product_history(product_id: int, db: Session = Depends(get_db)):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    logs = db.query(AuditLog).filter(AuditLog.target == product.sku).order_by(desc(AuditLog.timestamp)).all()
+    logs = db.query(AuditLog).filter(
+        or_(
+            AuditLog.product_id == product.id, 
+            AuditLog.target == product.sku
+        )
+    ).order_by(desc(AuditLog.timestamp)).all()
+    
     res = []
     for log in logs:
         user = db.query(User).filter(User.id == log.user_id).first()
@@ -348,10 +388,25 @@ def resolve_defect(defect_id: int, data: DefectResolve, db: Session = Depends(ge
     db.commit()
     return {"message": msg}
 
+@router.get("/categories")
+def get_categories(db: Session = Depends(get_db)):
+    # Query the database for all unique/distinct category strings
+    categories = db.query(Product.category).distinct().all()
+    
+    # SQLAlchemy returns a list of tuples like [('E-Liquid',), ('Hardware',)]
+    return [cat[0] for cat in categories if cat[0]]
 
-@router.get("/all-list")
-def get_all_products_list(db: Session = Depends(get_db)):
-    products = db.query(Product).all()
+@router.get("/autocomplete")
+def autocomplete_products(q: str = Query(""), db: Session = Depends(get_db)):
+        
+    # Search by SKU or Title, limit to 15 to keep the network payload tiny
+    products = db.query(Product).filter(
+        or_(
+            Product.sku.ilike(f"%{q}%"), 
+            Product.title.ilike(f"%{q}%")
+        )
+    ).limit(15).all()
+    
     return [{
         "id": p.id, 
         "sku": p.sku, 
@@ -378,3 +433,25 @@ def get_inventory_summary(db: Session = Depends(get_db)):
         "total_value": float(total_value),
         "total_loss": float(total_loss)
     }
+
+@router.delete("/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # 1. First, delete any attached defects to prevent database crashes
+    db.query(DefectiveItem).filter(DefectiveItem.product_id == product.id).delete()
+    
+    # 2. Delete the specific product history logs
+    db.query(AuditLog).filter(AuditLog.product_id == product.id).delete()
+
+    # 3. Now it is safe to delete the product itself
+    db.delete(product)
+    
+    # 4. Log the deletion in the general system logs
+    log_action(db, current_user.id, f"Deleted Product: {product.sku}", "SYSTEM")
+    
+    db.commit()
+    return {"message": "Product permanently deleted."}

@@ -1,0 +1,17 @@
+<div class="modal-overlay" id="globalConfirmModal" style="z-index: 2000;">
+    <div class="modal" style="max-width: 400px;">
+        <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+            <h3 id="confirmModalTitle" style="color: var(--text-1);">Confirm Action</h3>
+            <button class="btn-icon" onclick="closeConfirmModal()">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="modal-body" style="padding-top: 12px;">
+            <p id="confirmModalMessage" style="color: var(--text-2); margin-top: 0; font-size: 14px; line-height: 1.5;"></p>
+        </div>
+        <div class="modal-footer" style="border-top: none; justify-content: flex-end; padding-top: 0;">
+            <button class="btn btn-ghost" onclick="closeConfirmModal()">Cancel</button>
+            <button class="btn btn-danger" id="confirmModalActionBtn">Confirm</button>
+        </div>
+    </div>
+</div>
