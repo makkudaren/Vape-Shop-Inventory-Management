@@ -131,7 +131,7 @@ Copy the `.env example` and rename it to `.env`
 Example:
 
 =============================================================================
-DATABASE_URL=sqlite:///./kne_inventory.db
+DATABASE_URL=mysql+pymysql://root:@localhost:3306/kne_inventory
 SECRET_KEY=change-this-to-a-super-secret-key-in-production <---- CHANGE THIS
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=480
@@ -149,6 +149,7 @@ LOW_STOCK_THRESHOLD=10
 
 Open WAMP or MAMP and open phpMyAdmin
 Click on databases and create database named `kne_inventory`
+leave it empty since the backend creates the tables automatically
 
 ---
 
