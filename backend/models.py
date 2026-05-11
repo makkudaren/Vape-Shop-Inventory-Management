@@ -6,37 +6,36 @@ from backend.database import Base
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    role = Column(String, default="staff") # 'admin' or 'staff'
+    name = Column(String(255))
+    email = Column(String(255), unique=True, index=True)
+    hashed_password = Column(String(255))
+    role = Column(String(50), default="staff") # 'admin' or 'staff'
     is_verified = Column(Boolean, default=False)
-    verification_code = Column(String, nullable=True)
+    verification_code = Column(String(255), nullable=True)
     code_expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
-    sku = Column(String, unique=True, index=True)
-    title = Column(String)
-    brand = Column(String)
-    flavor = Column(String)
-    category = Column(String)
+    sku = Column(String(50), unique=True, index=True)
+    title = Column(String(255))
+    brand = Column(String(100))
+    flavor = Column(String(100))
+    category = Column(String(100))
     price = Column(Float)
     stock = Column(Integer, default=0)
-    status = Column(String, default="In Stock")
+    status = Column(String(50), default="In Stock")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-# Placeholders for Phases 3-5 to ensure DB is fully created
 class DefectiveItem(Base):
     __tablename__ = "defective_items"
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"))
     quantity = Column(Integer)
-    reason = Column(String)
-    note = Column(String, nullable=True)
+    reason = Column(String(255))
+    note = Column(String(255), nullable=True)
     reported_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -64,8 +63,8 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
-    action = Column(String)
-    target = Column(String)
+    action = Column(String(255))
+    target = Column(String(255))
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
 class StoreSettings(Base):

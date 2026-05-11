@@ -120,7 +120,6 @@ Install all required Python packages.
 
 =============================================================================
 > pip install -r requirements.txt
-> pip install "bcrypt<4.0.0"
 =============================================================================
 
 ---
@@ -146,7 +145,14 @@ LOW_STOCK_THRESHOLD=10
 
 ---
 
-# 6️⃣ Start the FastAPI Server
+# 6️⃣ Create `kne_inventory` database in phpMyAdmin
+
+Open WAMP or MAMP and open phpMyAdmin
+Click on databases and create database named `kne_inventory`
+
+---
+
+# 7️⃣ Start the FastAPI Server
 
 Run the application using Uvicorn. 
 Since `main.py` is inside the `backend` folder, use:
@@ -157,7 +163,7 @@ Since `main.py` is inside the `backend` folder, use:
 
 ---
 
-# 7️⃣ Open the Application
+# 8️⃣ Open the Application
 
 Once the server is running, open your browser and go to:
 
